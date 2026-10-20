@@ -1,1 +1,1 @@
-"""API routers package for TreeLedger OS."""
+"""API routers package for TreeLedger."""

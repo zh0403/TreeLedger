@@ -1,1 +1,1 @@
-"""Service layer package for TreeLedger OS API."""
+"""Service layer package for TreeLedger API."""

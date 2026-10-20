@@ -162,7 +162,7 @@ class VisionService:
                         contents.append(part)
 
                 context_lines = [
-                    "You are an expert certified arborist and urban forestry AI inspector for TreeLedger OS.",
+                    "You are an expert certified arborist and urban forestry AI inspector for TreeLedger.",
                     "Inspect the provided tree evidence and return a strict JSON object matching the schema.",
                     "Valid severity_grade values: 'LOW', 'MEDIUM', 'CRITICAL_24H'.",
                     "Preferred hazard_type values: 'STORM_DAMAGE', 'ROOT_HEAVE', 'DRY_FOLIAGE', 'PEST'.",
@@ -223,7 +223,7 @@ class VisionService:
                     logger.debug("Could not fetch after_photo_url bytes directly: %s", exc)
 
                 prompt_lines = [
-                    "You are an urban forestry dMRV auditor for TreeLedger OS.",
+                    "You are an urban forestry dMRV auditor for TreeLedger.",
                     "Compare the BEFORE maintenance photo and the AFTER maintenance photo for the same tree asset.",
                     f"Tree ID: {tree_id or 'UNKNOWN'}",
                     f"Claimed Contractor Action: {action_type}",

@@ -659,7 +659,7 @@ export default function TownshipAdminCommandCenter() {
         URL.revokeObjectURL(url);
       } else {
         const jsonPayload = {
-          platform: "TreeLedger OS dMRV Command Center",
+          platform: "TreeLedger dMRV Command Center",
           township: "City of Elmina (Sime Darby Property)",
           coordinates: [3.195, 101.515],
           generated_at: new Date().toISOString(),
@@ -735,7 +735,7 @@ export default function TownshipAdminCommandCenter() {
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-lg font-bold tracking-tight text-white">
-                  TreeLedger OS — Township Operations Command Center
+                  TreeLedger — Township Operations Command Center
                 </h1>
                 <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   City of Elmina • dMRV Live

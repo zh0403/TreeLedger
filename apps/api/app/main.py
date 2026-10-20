@@ -4,7 +4,7 @@ from app.api.routes import router as api_router
 
 from app.api.vision import router as vision_router
 
-app = FastAPI(title="TreeLedger OS API", version="1.0.0")
+app = FastAPI(title="TreeLedger API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,4 +20,4 @@ app.include_router(vision_router)
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "TreeLedger OS Backend"}
+    return {"status": "healthy", "service": "TreeLedger Backend"}

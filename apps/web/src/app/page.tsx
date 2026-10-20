@@ -18,7 +18,7 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight">
-              TreeLedger OS
+              TreeLedger
             </h1>
             <p className="text-xs text-slate-400">
               City of Elmina • Civic dMRV & Contractor SLA Platform

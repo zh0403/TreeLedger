@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TreeLedger OS | Civic dMRV & Urban Forestry Stewardship",
+  title: "TreeLedger | Civic dMRV & Urban Forestry Stewardship",
   description:
     "Pre-handover DLP tree quota audits, AI hazard triage, and Arbitrum-verified contractor proof-of-work.",
 };

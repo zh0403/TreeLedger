@@ -1,4 +1,4 @@
-# TreeLedger OS 🌳
+# TreeLedger 🌳
 
 > Urban Forestry dMRV & Municipal SLA Verification Platform for SDP University Hackathon 2026.
 

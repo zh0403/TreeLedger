@@ -57,7 +57,7 @@ export function MobileShell({
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold tracking-tight text-sm text-white">
-                    TreeLedger OS
+                    TreeLedger
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
                     <Radio className="w-2.5 h-2.5 animate-pulse" />
