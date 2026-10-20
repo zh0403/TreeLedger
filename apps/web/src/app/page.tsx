@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowRight,
   HardHat,
+  LayoutDashboard,
   ShieldCheck,
   Trees,
 } from 'lucide-react';
@@ -102,6 +103,24 @@ export default function Home() {
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+          </Link>
+
+          <Link
+            href="/admin"
+            className="flex items-center justify-between rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-purple-500/40 p-3.5 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <LayoutDashboard className="w-5 h-5 text-purple-400" />
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  Township Operations Command Center
+                </div>
+                <div className="text-[11px] text-purple-300/80">
+                  /admin • Mapbox GIS, SLA Penalties & ESG Export
+                </div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition-colors" />
           </Link>
         </div>
       </div>
