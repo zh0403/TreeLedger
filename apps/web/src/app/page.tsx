@@ -1,69 +1,110 @@
-import Image from "next/image";
+import Link from 'next/link';
+import {
+  AlertTriangle,
+  ArrowRight,
+  HardHat,
+  ShieldCheck,
+  Trees,
+} from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full rounded-3xl bg-slate-900/90 border border-slate-800 p-6 shadow-2xl space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <Trees className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-white tracking-tight">
+              TreeLedger OS
+            </h1>
+            <p className="text-xs text-slate-400">
+              City of Elmina • Civic dMRV & Contractor SLA Platform
+            </p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Select a role-based mobile PWA portal below to inspect pre-handover
+          tree quotas, report civic hazards, or execute contractor proof-of-work
+          tasks:
+        </p>
+
+        <div className="space-y-2.5">
+          <Link
+            href="/app/explore"
+            className="flex items-center justify-between rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-emerald-500/30 p-3.5 transition-colors group"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <div className="flex items-center gap-3">
+              <Trees className="w-5 h-5 text-emerald-400" />
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  Resident Explore & dMRV
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  /app/explore • Precinct Switcher & Carbon Ticker
+                </div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+          </Link>
+
+          <Link
+            href="/app/hazards"
+            className="flex items-center justify-between rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-amber-500/30 p-3.5 transition-colors group"
           >
-            Documentation
-          </a>
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  Public Hazard Feed & AI Triage
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  /app/hazards • 4-Stage Stepper & Photo Drawer
+                </div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+          </Link>
+
+          <Link
+            href="/app/maintenance"
+            className="flex items-center justify-between rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-cyan-500/30 p-3.5 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-5 h-5 text-cyan-400" />
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  Audited Maintenance Stream
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  /app/maintenance • Before/After & Arbitrum Badges
+                </div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+          </Link>
+
+          <Link
+            href="/contractor/tasks"
+            className="flex items-center justify-between rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-slate-700 p-3.5 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <HardHat className="w-5 h-5 text-amber-300" />
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  Contractor Task Execution Queue
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  /contractor/tasks • Proof-of-Work Upload & Resolution
+                </div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+          </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
