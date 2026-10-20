@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.env
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Blockchain / Hardhat
+cache/
+artifacts/
+
+# AI Agent instructions (local only)
+Agent.md
