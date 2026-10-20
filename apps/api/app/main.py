@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router as api_router
 
+from app.api.vision import router as vision_router
+
 app = FastAPI(title="TreeLedger OS API", version="1.0.0")
 
 app.add_middleware(
@@ -13,6 +15,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+app.include_router(vision_router)
 
 
 @app.get("/health")
