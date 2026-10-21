@@ -5,7 +5,8 @@ from app.core.config import settings
 
 @lru_cache
 def get_supabase_client() -> Client:
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+    clean_url = settings.SUPABASE_URL.split("/rest/v1")[0].rstrip("/")
+    return create_client(clean_url, settings.SUPABASE_KEY)
 
 
 supabase: Client = get_supabase_client()
