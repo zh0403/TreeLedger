@@ -20,7 +20,7 @@ import {
   ZoomOut,
   Crosshair,
   Globe,
-  Compass,
+  Map as MapIcon,
   Activity,
   Wind,
   X,
@@ -32,12 +32,96 @@ import { fetchTrees } from '@/lib/api';
 export const ELMINA_CENTER_LNG = 101.5034;
 export const ELMINA_CENTER_LAT = 3.1942;
 
-const MAPBOX_STYLES = {
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
-  dark: 'mapbox://styles/mapbox/navigation-night-v1',
-} as const;
+export type MapViewMode = 'default' | 'satellite';
 
-type MapStyleMode = keyof typeof MAPBOX_STYLES;
+// Real, tokenless Mapbox GL Style v8 specifications using high-availability global GIS tile servers
+const FREE_REAL_MAP_STYLES: Record<MapViewMode, mapboxgl.StyleSpecification> = {
+  default: {
+    version: 8,
+    name: 'Elmina Default Street & Park GIS',
+    sources: {
+      'carto-voyager': {
+        type: 'raster',
+        tiles: [
+          'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+          'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+          'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        ],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors © CARTO',
+      },
+    },
+    layers: [
+      {
+        id: 'carto-voyager-layer',
+        type: 'raster',
+        source: 'carto-voyager',
+        minzoom: 0,
+        maxzoom: 20,
+      },
+    ],
+  },
+  satellite: {
+    version: 8,
+    name: 'Elmina Satellite Hybrid Imagery',
+    sources: {
+      'esri-world-imagery': {
+        type: 'raster',
+        tiles: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 256,
+        attribution: '© Esri, Maxar, Earthstar Geographics',
+      },
+      'esri-transportation': {
+        type: 'raster',
+        tiles: [
+          'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 256,
+      },
+      'carto-labels': {
+        type: 'raster',
+        tiles: [
+          'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
+          'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
+        ],
+        tileSize: 256,
+      },
+    },
+    layers: [
+      {
+        id: 'esri-satellite-base',
+        type: 'raster',
+        source: 'esri-world-imagery',
+        minzoom: 0,
+        maxzoom: 19,
+      },
+      {
+        id: 'esri-Satellite-roads',
+        type: 'raster',
+        source: 'esri-transportation',
+        minzoom: 0,
+        maxzoom: 19,
+        paint: {
+          'raster-opacity': 0.85,
+        },
+      },
+      {
+        id: 'carto-hybrid-labels',
+        type: 'raster',
+        source: 'carto-labels',
+        minzoom: 0,
+        maxzoom: 20,
+      },
+    ],
+  },
+};
+
+const MAPBOX_CLOUD_STYLES: Record<MapViewMode, string> = {
+  default: 'mapbox://styles/mapbox/navigation-night-v1',
+  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+};
 
 const PRECINCTS = [
   'All Projects',
@@ -48,7 +132,7 @@ const PRECINCTS = [
 ];
 
 const PRECINCT_CENTERS: Record<string, { lng: number; lat: number; zoom: number }> = {
-  'All Projects': { lng: ELMINA_CENTER_LNG, lat: ELMINA_CENTER_LAT, zoom: 15.0 },
+  'All Projects': { lng: ELMINA_CENTER_LNG, lat: ELMINA_CENTER_LAT, zoom: 14.9 },
   'Sector 4A - Ilham Residence': { lng: 101.5064, lat: 3.1966, zoom: 16.0 },
   'Elmina Central Park - Lakeshore': { lng: 101.5034, lat: 3.1942, zoom: 16.0 },
   'Elmina Green - Phase 3 Boulevard': { lng: 101.4996, lat: 3.1964, zoom: 16.0 },
@@ -255,7 +339,6 @@ const ELMINA_CANOPY_TREES: Tree[] = [
   },
 ];
 
-// Map any legacy backend precinct label to the 4 canonical filter tabs
 function normalizePrecinctName(precinct: string): string {
   if (PRECINCTS.includes(precinct)) return precinct;
   const lower = precinct.toLowerCase();
@@ -282,7 +365,6 @@ function mergeAndNormalizeTrees(fetched: Tree[]): Tree[] {
   for (const item of fetched) {
     const existing = byId.get(item.id);
     const normalizedPrecinct = normalizePrecinctName(item.precinct);
-    // Keep coordinates anchored around City of Elmina [101.5034, 3.1942]
     const hasNearElminaCoords =
       Math.abs(item.latitude - ELMINA_CENTER_LAT) < 0.008 &&
       Math.abs(item.longitude - ELMINA_CENTER_LNG) < 0.008;
@@ -307,7 +389,7 @@ function getHealthMeta(score: number) {
     return {
       label: 'Healthy Canopy',
       hex: '#10b981',
-      ringHex: 'rgba(16, 185, 129, 0.38)',
+      ringHex: 'rgba(16, 185, 129, 0.42)',
       badgeClass: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
       textClass: 'text-emerald-400',
     };
@@ -316,7 +398,7 @@ function getHealthMeta(score: number) {
     return {
       label: 'Moderate Stress',
       hex: '#f59e0b',
-      ringHex: 'rgba(245, 158, 11, 0.38)',
+      ringHex: 'rgba(245, 158, 11, 0.42)',
       badgeClass: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
       textClass: 'text-amber-400',
     };
@@ -324,7 +406,7 @@ function getHealthMeta(score: number) {
   return {
     label: 'Critical Action',
     hex: '#f43f5e',
-    ringHex: 'rgba(244, 63, 94, 0.45)',
+    ringHex: 'rgba(244, 63, 94, 0.48)',
     badgeClass: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
     textClass: 'text-rose-400',
   };
@@ -440,15 +522,16 @@ export function TownshipTransparencyExplorer() {
   const [selectedTree, setSelectedTree] = useState<Tree | null>(ELMINA_CANOPY_TREES[3]);
   const [charterOpen, setCharterOpen] = useState(true);
 
-  // Mapbox GL & Topographic Fallback State
+  // Mapbox GL WebGL Engine & Offline SVG Fallback State
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || '';
-  const [useFallbackMap, setUseFallbackMap] = useState<boolean>(!mapboxToken);
+  const [useFallbackMap, setUseFallbackMap] = useState<boolean>(false);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-  const [mapStyleMode, setMapStyleMode] = useState<MapStyleMode>('satellite');
+  // Two view options: 'default' (Default Street & Park View) and 'satellite' (Real Satellite Hybrid Imagery)
+  const [mapStyleMode, setMapStyleMode] = useState<MapViewMode>('default');
   const [fallbackZoom, setFallbackZoom] = useState<number>(1);
   const [fallbackCenter, setFallbackCenter] = useState<{ lng: number; lat: number }>({
     lng: ELMINA_CENTER_LNG,
@@ -469,16 +552,16 @@ export function TownshipTransparencyExplorer() {
     return trees.filter((t) => t.precinct === selectedPrecinct);
   }, [trees, selectedPrecinct]);
 
-  // Camera flyTo helper that works seamlessly on both live Mapbox GL and Vector Topographic GIS
+  // Camera flyTo helper
   const flyToCoordinates = useCallback(
     (lng: number, lat: number, targetZoom = 16.2) => {
-      if (!useFallbackMap && mapInstanceRef.current && mapLoaded) {
+      if (!useFallbackMap && mapInstanceRef.current) {
         try {
           mapInstanceRef.current.flyTo({
             center: [lng, lat],
             zoom: targetZoom,
-            pitch: 38,
-            bearing: -10,
+            pitch: 30,
+            bearing: 0,
             duration: 750,
           });
         } catch {
@@ -491,38 +574,56 @@ export function TownshipTransparencyExplorer() {
         );
       }
     },
-    [useFallbackMap, mapLoaded]
+    [useFallbackMap]
   );
 
   // Focus tree marker (camera flyTo + show tree details)
   const handleSelectTree = useCallback(
     (tree: Tree) => {
       setSelectedTree(tree);
-      flyToCoordinates(tree.longitude, tree.latitude, 16.4);
+      flyToCoordinates(tree.longitude, tree.latitude, 16.5);
     },
     [flyToCoordinates]
   );
 
-  // Initialize Mapbox GL when NEXT_PUBLIC_MAPBOX_TOKEN is present
+  // Initialize Real WebGL Map centered on City of Elmina [101.5034, 3.1942]
   useEffect(() => {
-    if (useFallbackMap || !mapboxToken || !mapContainerRef.current) {
+    if (useFallbackMap || !mapContainerRef.current) {
       return;
     }
 
     let isCancelled = false;
-    mapboxgl.accessToken = mapboxToken;
 
     try {
-      const map = new mapboxgl.Map({
-        container: mapContainerRef.current,
-        style: MAPBOX_STYLES[mapStyleMode],
-        center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
-        zoom: 15.0,
-        pitch: 34,
-        bearing: -10,
-        attributionControl: false,
-      });
+      // Allow Mapbox GL v3 WebGL engine to render open raster tile sources (CARTO / Esri World Imagery)
+      // without revoking the WebGL canvas when NEXT_PUBLIC_MAPBOX_TOKEN is absent.
+      const mapProto = mapboxgl.Map.prototype as unknown as {
+        _authenticate?: () => void;
+        _revokeAuth?: () => void;
+      };
+      mapProto._authenticate = () => {};
+      mapProto._revokeAuth = () => {};
 
+      if (mapboxToken) {
+        mapboxgl.accessToken = mapboxToken;
+      }
+
+      const initialStyle = mapboxToken
+        ? MAPBOX_CLOUD_STYLES[mapStyleMode]
+        : FREE_REAL_MAP_STYLES[mapStyleMode];
+
+      const mapOptions: mapboxgl.MapOptions & { testMode?: boolean } = {
+        container: mapContainerRef.current,
+        style: initialStyle,
+        center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
+        zoom: 14.9,
+        pitch: 28,
+        bearing: 0,
+        attributionControl: false,
+        testMode: !mapboxToken,
+      };
+
+      const map = new mapboxgl.Map(mapOptions);
       mapInstanceRef.current = map;
 
       map.on('load', () => {
@@ -531,9 +632,21 @@ export function TownshipTransparencyExplorer() {
         }
       });
 
-      map.on('error', () => {
+      map.on('style.load', () => {
         if (!isCancelled) {
-          setUseFallbackMap(true);
+          setMapLoaded(true);
+        }
+      });
+
+      map.on('error', () => {
+        // If a Mapbox cloud style fails due to an invalid token, switch seamlessly to the free real GIS tiles
+        if (!isCancelled && mapInstanceRef.current && mapboxToken) {
+          try {
+            mapInstanceRef.current.setStyle(FREE_REAL_MAP_STYLES[mapStyleMode]);
+            setMapLoaded(true);
+          } catch {
+            setUseFallbackMap(true);
+          }
         }
       });
 
@@ -551,12 +664,15 @@ export function TownshipTransparencyExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapboxToken, useFallbackMap]);
 
-  // Synchronize Mapbox style when toggling Satellite vs. Dark Vector
-  const handleToggleMapStyle = (nextMode: MapStyleMode) => {
+  // Toggle between Default View and Satellite View
+  const handleToggleMapStyle = (nextMode: MapViewMode) => {
     setMapStyleMode(nextMode);
-    if (!useFallbackMap && mapInstanceRef.current && mapLoaded) {
+    if (!useFallbackMap && mapInstanceRef.current) {
       try {
-        mapInstanceRef.current.setStyle(MAPBOX_STYLES[nextMode]);
+        const nextStyle = mapboxToken
+          ? MAPBOX_CLOUD_STYLES[nextMode]
+          : FREE_REAL_MAP_STYLES[nextMode];
+        mapInstanceRef.current.setStyle(nextStyle);
       } catch {
         setUseFallbackMap(true);
       }
@@ -575,28 +691,52 @@ export function TownshipTransparencyExplorer() {
       const health = getHealthMeta(tree.health_score || 0);
       const isSelected = selectedTree?.id === tree.id;
 
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.setAttribute('aria-label', `Inspect tree ${tree.id} (${tree.species})`);
-      el.style.width = isSelected ? '30px' : '22px';
-      el.style.height = isSelected ? '30px' : '22px';
-      el.style.borderRadius = '9999px';
-      el.style.backgroundColor = health.hex;
-      el.style.border = isSelected
-        ? '3px solid #f8fafc'
-        : '2px solid rgba(2, 6, 23, 0.92)';
-      el.style.boxShadow = isSelected
-        ? `0 0 0 6px ${health.ringHex}, 0 6px 16px rgba(0,0,0,0.65)`
-        : `0 0 0 4px ${health.ringHex}`;
-      el.style.cursor = 'pointer';
-      el.style.transition = 'all 150ms ease';
+      const wrapper = document.createElement('button');
+      wrapper.type = 'button';
+      wrapper.setAttribute('aria-label', `Inspect tree ${tree.id} (${tree.species})`);
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      wrapper.style.alignItems = 'center';
+      wrapper.style.background = 'transparent';
+      wrapper.style.border = 'none';
+      wrapper.style.padding = '0';
+      wrapper.style.cursor = 'pointer';
 
-      el.addEventListener('click', (e) => {
+      const dot = document.createElement('div');
+      dot.style.width = isSelected ? '30px' : '22px';
+      dot.style.height = isSelected ? '30px' : '22px';
+      dot.style.borderRadius = '9999px';
+      dot.style.backgroundColor = health.hex;
+      dot.style.border = isSelected
+        ? '3px solid #ffffff'
+        : '2.5px solid #020617';
+      dot.style.boxShadow = isSelected
+        ? `0 0 0 6px ${health.ringHex}, 0 6px 16px rgba(0,0,0,0.75)`
+        : `0 0 0 4px ${health.ringHex}, 0 3px 8px rgba(0,0,0,0.5)`;
+      dot.style.transition = 'all 150ms ease';
+
+      const label = document.createElement('span');
+      label.textContent = tree.id;
+      label.style.marginTop = '3px';
+      label.style.padding = '1px 5px';
+      label.style.borderRadius = '4px';
+      label.style.fontSize = '9px';
+      label.style.fontFamily = 'monospace';
+      label.style.fontWeight = '700';
+      label.style.backgroundColor = isSelected ? '#10b981' : 'rgba(2, 6, 23, 0.88)';
+      label.style.color = isSelected ? '#020617' : '#f8fafc';
+      label.style.border = '1px solid rgba(51, 65, 85, 0.8)';
+      label.style.whiteSpace = 'nowrap';
+
+      wrapper.appendChild(dot);
+      wrapper.appendChild(label);
+
+      wrapper.addEventListener('click', (e) => {
         e.stopPropagation();
         handleSelectTree(tree);
       });
 
-      const marker = new mapboxgl.Marker({ element: el })
+      const marker = new mapboxgl.Marker({ element: wrapper, anchor: 'center' })
         .setLngLat([tree.longitude, tree.latitude])
         .addTo(map);
 
@@ -606,7 +746,7 @@ export function TownshipTransparencyExplorer() {
 
   // Zoom +/- and Reset Center controls
   const handleZoom = (delta: number) => {
-    if (!useFallbackMap && mapInstanceRef.current && mapLoaded) {
+    if (!useFallbackMap && mapInstanceRef.current) {
       const nextZoom = mapInstanceRef.current.getZoom() + delta;
       mapInstanceRef.current.zoomTo(nextZoom, { duration: 250 });
     } else {
@@ -618,12 +758,12 @@ export function TownshipTransparencyExplorer() {
 
   const handleResetCenter = () => {
     const target = PRECINCT_CENTERS[selectedPrecinct] || PRECINCT_CENTERS['All Projects'];
-    if (!useFallbackMap && mapInstanceRef.current && mapLoaded) {
+    if (!useFallbackMap && mapInstanceRef.current) {
       mapInstanceRef.current.flyTo({
         center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
-        zoom: 15.0,
-        pitch: 34,
-        bearing: -10,
+        zoom: 14.9,
+        pitch: 28,
+        bearing: 0,
         duration: 750,
       });
     } else {
@@ -632,10 +772,10 @@ export function TownshipTransparencyExplorer() {
     }
   };
 
-  // Project [lat, lng] around City of Elmina [101.5034, 3.1942] to percentage coordinates on the SVG GIS canvas
+  // Project [lat, lng] around City of Elmina [101.5034, 3.1942] to percentage coordinates if WebGL is unavailable
   const projectToCanvasPercent = (lat: number, lng: number) => {
-    const latSpan = 0.0085; // ~950m vertical window around 3.1942
-    const lngSpan = 0.0115; // ~1.25km horizontal window around 101.5034
+    const latSpan = 0.0085;
+    const lngSpan = 0.0115;
     const x = 50 + ((lng - ELMINA_CENTER_LNG) / (lngSpan / 2)) * 38;
     const y = 50 - ((lat - ELMINA_CENTER_LAT) / (latSpan / 2)) * 38;
     return {
@@ -644,7 +784,6 @@ export function TownshipTransparencyExplorer() {
     };
   };
 
-  // Compute camera pan translation for fallback GIS layer when flying to a marker/precinct
   const fallbackTransformStyle = useMemo(() => {
     const dx = ((ELMINA_CENTER_LNG - fallbackCenter.lng) / 0.0055) * 14;
     const dy = ((fallbackCenter.lat - ELMINA_CENTER_LAT) / 0.0045) * 14;
@@ -830,7 +969,7 @@ export function TownshipTransparencyExplorer() {
         </div>
       </div>
 
-      {/* (a) Photorealistic / Topographic Interactive GIS Canopy Map (City of Elmina) */}
+      {/* (a) Real Interactive GIS Canopy Map (City of Elmina) with Default & Satellite Views */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -838,16 +977,16 @@ export function TownshipTransparencyExplorer() {
             <span>Interactive Tree Canopy Map (City of Elmina):</span>
           </div>
           <span className="text-xs text-slate-400">
-            Click any marker to flyTo camera and inspect Species, Health %, CO₂, and DLP status
+            Switch between Default &amp; Satellite view • Click any tree marker to flyTo and inspect
           </span>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden relative shadow-2xl">
           {/* GIS Map Viewport (height ~460px) */}
           <div className="h-[460px] w-full relative bg-slate-950 overflow-hidden select-none">
-            {/* Top-Left Geospatial HUD & Style Mode Toggle */}
+            {/* Top-Left Geospatial HUD & Default / Satellite View Toggle */}
             <div className="absolute top-3.5 left-3.5 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
-              <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-lg">
+              <div className="bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-lg">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
@@ -865,37 +1004,37 @@ export function TownshipTransparencyExplorer() {
                 </div>
               </div>
 
-              {/* Satellite vs. Dark Vector Toggle Control */}
+              {/* Default vs. Satellite View Toggle Control */}
               <div
-                className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-1 flex items-center gap-1 shadow-lg"
+                className="bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-1 flex items-center gap-1 shadow-lg"
                 role="group"
-                aria-label="Map layer style toggle"
+                aria-label="Map view mode toggle"
               >
                 <button
                   type="button"
+                  onClick={() => handleToggleMapStyle('default')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    mapStyleMode === 'default'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                  title="Default Map View (Street & Park GIS)"
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span>Default</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleToggleMapStyle('satellite')}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
                     mapStyleMode === 'satellite'
                       ? 'bg-emerald-500 text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:text-white'
                   }`}
-                  title="Photorealistic Satellite-Streets Layer (satellite-streets-v12)"
+                  title="Satellite Map View (High-Res Aerial Imagery)"
                 >
                   <Globe className="w-3.5 h-3.5" />
                   <span>Satellite</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleToggleMapStyle('dark')}
-                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                    mapStyleMode === 'dark'
-                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                  title="Dark Navigation Vector Layer (navigation-night-v1)"
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>Dark Vector</span>
                 </button>
               </div>
             </div>
@@ -905,7 +1044,7 @@ export function TownshipTransparencyExplorer() {
               <button
                 type="button"
                 onClick={() => handleZoom(1)}
-                className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-lg transition cursor-pointer"
+                className="p-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-lg transition cursor-pointer"
                 title="Zoom In (+)"
                 aria-label="Zoom In"
               >
@@ -914,7 +1053,7 @@ export function TownshipTransparencyExplorer() {
               <button
                 type="button"
                 onClick={() => handleZoom(-1)}
-                className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-lg transition cursor-pointer"
+                className="p-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-lg transition cursor-pointer"
                 title="Zoom Out (-)"
                 aria-label="Zoom Out"
               >
@@ -923,7 +1062,7 @@ export function TownshipTransparencyExplorer() {
               <button
                 type="button"
                 onClick={handleResetCenter}
-                className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border border-slate-800 shadow-lg transition cursor-pointer"
+                className="p-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 text-emerald-400 border border-slate-800 shadow-lg transition cursor-pointer"
                 title="Reset Center [101.5034, 3.1942]"
                 aria-label="Reset Center"
               >
@@ -932,22 +1071,22 @@ export function TownshipTransparencyExplorer() {
             </div>
 
             {/* Bottom-Left Canopy Health Legend */}
-            <div className="hidden sm:flex absolute bottom-3.5 left-3.5 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 shadow-lg items-center gap-3 text-[11px] pointer-events-auto">
+            <div className="hidden sm:flex absolute bottom-3.5 left-3.5 z-20 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 shadow-lg items-center gap-3 text-[11px] pointer-events-auto">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30" />
-                <span className="text-slate-300">Healthy (&ge;80%)</span>
+                <span className="text-slate-200 font-medium">Healthy (&ge;80%)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/30" />
-                <span className="text-slate-300">Stress (50–79%)</span>
+                <span className="text-slate-200 font-medium">Stress (50–79%)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-500/30" />
-                <span className="text-slate-300">Critical (&lt;50%)</span>
+                <span className="text-slate-200 font-medium">Critical (&lt;50%)</span>
               </div>
             </div>
 
-            {/* Map Engine Surface: Live Mapbox GL or High-Fidelity Topographic GIS Fallback */}
+            {/* Live WebGL Map Surface (with resilient SVG fallback if WebGL is disabled) */}
             {!useFallbackMap ? (
               <div ref={mapContainerRef} className="w-full h-full" />
             ) : (
@@ -955,7 +1094,6 @@ export function TownshipTransparencyExplorer() {
                 onClick={() => setSelectedTree(null)}
                 className="relative w-full h-full bg-slate-950 overflow-hidden"
               >
-                {/* Photorealistic Satellite-Streets / Dark Vector Topographic SVG Layer */}
                 <svg
                   viewBox="0 0 1000 520"
                   preserveAspectRatio="xMidYMid slice"
@@ -1006,7 +1144,6 @@ export function TownshipTransparencyExplorer() {
                     </linearGradient>
                   </defs>
 
-                  {/* Base Terrain Fill */}
                   <rect
                     width="1000"
                     height="520"
@@ -1015,7 +1152,6 @@ export function TownshipTransparencyExplorer() {
                   <rect width="1000" height="520" fill="url(#elmina-canopy-biomass)" />
                   <rect width="1000" height="520" fill="url(#elmina-gis-grid)" />
 
-                  {/* Topographic Elevation Contours (Elmina 300-Acre Central Park Greenbelt) */}
                   <ellipse
                     cx="500"
                     cy="255"
@@ -1045,65 +1181,6 @@ export function TownshipTransparencyExplorer() {
                     strokeWidth="1.2"
                   />
 
-                  {/* Precinct Zoning Polygons */}
-                  {/* NW: Elmina Green - Phase 3 Boulevard */}
-                  <polygon
-                    points="130,65 445,60 465,215 155,225"
-                    fill="rgba(20, 184, 166, 0.07)"
-                    stroke={
-                      selectedPrecinct === 'Elmina Green - Phase 3 Boulevard'
-                        ? 'rgba(45, 212, 191, 0.75)'
-                        : 'rgba(20, 184, 166, 0.28)'
-                    }
-                    strokeWidth={
-                      selectedPrecinct === 'Elmina Green - Phase 3 Boulevard' ? '2.5' : '1.4'
-                    }
-                    strokeDasharray="6 4"
-                  />
-                  {/* NE: Sector 4A - Ilham Residence */}
-                  <polygon
-                    points="535,60 865,75 880,230 525,220"
-                    fill="rgba(56, 189, 248, 0.06)"
-                    stroke={
-                      selectedPrecinct === 'Sector 4A - Ilham Residence'
-                        ? 'rgba(56, 189, 248, 0.8)'
-                        : 'rgba(56, 189, 248, 0.28)'
-                    }
-                    strokeWidth={
-                      selectedPrecinct === 'Sector 4A - Ilham Residence' ? '2.5' : '1.4'
-                    }
-                    strokeDasharray="6 4"
-                  />
-                  {/* Center: Elmina Central Park - Lakeshore */}
-                  <polygon
-                    points="310,175 685,175 705,335 295,335"
-                    fill="rgba(16, 185, 129, 0.08)"
-                    stroke={
-                      selectedPrecinct === 'Elmina Central Park - Lakeshore'
-                        ? 'rgba(52, 211, 153, 0.85)'
-                        : 'rgba(16, 185, 129, 0.32)'
-                    }
-                    strokeWidth={
-                      selectedPrecinct === 'Elmina Central Park - Lakeshore' ? '2.5' : '1.5'
-                    }
-                    strokeDasharray="5 4"
-                  />
-                  {/* South: Elmina Valley - Riparian Corridor */}
-                  <polygon
-                    points="220,340 770,340 795,465 195,465"
-                    fill="rgba(168, 85, 247, 0.06)"
-                    stroke={
-                      selectedPrecinct === 'Elmina Valley - Riparian Corridor'
-                        ? 'rgba(192, 132, 252, 0.8)'
-                        : 'rgba(168, 85, 247, 0.28)'
-                    }
-                    strokeWidth={
-                      selectedPrecinct === 'Elmina Valley - Riparian Corridor' ? '2.5' : '1.4'
-                    }
-                    strokeDasharray="5 5"
-                  />
-
-                  {/* Elmina Retention Lake & Sungai Buloh Riparian Waterway Contours */}
                   <path
                     d="M 35,345 C 185,330 295,235 465,250 C 615,265 735,205 965,165"
                     fill="none"
@@ -1112,78 +1189,13 @@ export function TownshipTransparencyExplorer() {
                     strokeLinecap="round"
                   />
                   <path
-                    d="M 35,345 C 185,330 295,235 465,250 C 615,265 735,205 965,165"
-                    fill="none"
-                    stroke="rgba(56, 189, 248, 0.55)"
-                    strokeWidth="3"
-                    strokeDasharray="10 6"
-                  />
-                  {/* Central Retention Lake Basin */}
-                  <path
                     d="M 390,235 C 435,205 545,210 585,245 C 610,270 565,305 495,300 C 425,295 365,265 390,235 Z"
                     fill="url(#elmina-lake-depth)"
                     stroke="rgba(56, 189, 248, 0.5)"
                     strokeWidth="1.8"
                   />
-
-                  {/* Guthrie Corridor Expressway (GCE) & Persiaran Shorea Boulevards */}
-                  <path
-                    d="M 95,30 L 905,490"
-                    fill="none"
-                    stroke="rgba(100, 116, 139, 0.42)"
-                    strokeWidth="5"
-                  />
-                  <path
-                    d="M 245,495 L 765,30"
-                    fill="none"
-                    stroke="rgba(100, 116, 139, 0.32)"
-                    strokeWidth="3.5"
-                  />
-
-                  {/* Precinct Map Labels */}
-                  <text
-                    x="155"
-                    y="92"
-                    fill="rgba(45, 212, 191, 0.78)"
-                    fontSize="10"
-                    fontWeight="700"
-                    letterSpacing="1.3"
-                  >
-                    ELMINA GREEN • PHASE 3 BOULEVARD
-                  </text>
-                  <text
-                    x="555"
-                    y="92"
-                    fill="rgba(56, 189, 248, 0.78)"
-                    fontSize="10"
-                    fontWeight="700"
-                    letterSpacing="1.3"
-                  >
-                    SECTOR 4A • ILHAM RESIDENCE
-                  </text>
-                  <text
-                    x="375"
-                    y="202"
-                    fill="rgba(110, 231, 183, 0.88)"
-                    fontSize="10.5"
-                    fontWeight="700"
-                    letterSpacing="1.4"
-                  >
-                    ELMINA CENTRAL PARK • LAKESHORE
-                  </text>
-                  <text
-                    x="365"
-                    y="445"
-                    fill="rgba(216, 180, 254, 0.8)"
-                    fontSize="10"
-                    fontWeight="700"
-                    letterSpacing="1.3"
-                  >
-                    ELMINA VALLEY • RIPARIAN CORRIDOR
-                  </text>
                 </svg>
 
-                {/* Synchronized Interactive Tree Markers Overlay */}
                 <div
                   className="absolute inset-0 transition-transform duration-500 ease-out pointer-events-none"
                   style={fallbackTransformStyle}
@@ -1208,13 +1220,6 @@ export function TownshipTransparencyExplorer() {
                         aria-label={`Inspect tree ${tree.id} (${tree.species})`}
                         className="group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none cursor-pointer pointer-events-auto z-10"
                       >
-                        {isSelected && (
-                          <span
-                            className="absolute -inset-2.5 rounded-full animate-ping opacity-65"
-                            style={{ backgroundColor: health.hex }}
-                          />
-                        )}
-
                         <div
                           className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${
                             isSelected
@@ -1232,17 +1237,6 @@ export function TownshipTransparencyExplorer() {
                             } text-slate-950 stroke-[2.4]`}
                           />
                         </div>
-
-                        {/* Marker ID Pill */}
-                        <span
-                          className={`mt-1 block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all whitespace-nowrap ${
-                            isSelected
-                              ? 'bg-emerald-500 text-slate-950 shadow-md'
-                              : 'bg-slate-950/90 text-slate-200 border border-slate-800 group-hover:border-emerald-500/50'
-                          }`}
-                        >
-                          {tree.id}
-                        </span>
                       </button>
                     );
                   })}

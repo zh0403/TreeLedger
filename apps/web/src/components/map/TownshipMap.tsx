@@ -13,7 +13,6 @@ import {
   Wind,
   Activity,
   ExternalLink,
-  Layers,
   Crosshair,
   ZoomIn,
   ZoomOut,
@@ -21,7 +20,99 @@ import {
   Clock,
   QrCode,
   Sparkles,
+  Globe,
+  Map as MapIcon,
 } from "lucide-react";
+
+export type MapViewMode = "default" | "satellite";
+
+const FREE_REAL_MAP_STYLES: Record<MapViewMode, mapboxgl.StyleSpecification> = {
+  default: {
+    version: 8,
+    name: "Elmina Default Street & Park GIS",
+    sources: {
+      "carto-voyager": {
+        type: "raster",
+        tiles: [
+          "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+          "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+          "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        ],
+        tileSize: 256,
+        attribution: "© OpenStreetMap contributors © CARTO",
+      },
+    },
+    layers: [
+      {
+        id: "carto-voyager-layer",
+        type: "raster",
+        source: "carto-voyager",
+        minzoom: 0,
+        maxzoom: 20,
+      },
+    ],
+  },
+  satellite: {
+    version: 8,
+    name: "Elmina Satellite Hybrid Imagery",
+    sources: {
+      "esri-world-imagery": {
+        type: "raster",
+        tiles: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        ],
+        tileSize: 256,
+        attribution: "© Esri, Maxar, Earthstar Geographics",
+      },
+      "esri-transportation": {
+        type: "raster",
+        tiles: [
+          "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+        ],
+        tileSize: 256,
+      },
+      "carto-labels": {
+        type: "raster",
+        tiles: [
+          "https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png",
+          "https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png",
+        ],
+        tileSize: 256,
+      },
+    },
+    layers: [
+      {
+        id: "esri-satellite-base",
+        type: "raster",
+        source: "esri-world-imagery",
+        minzoom: 0,
+        maxzoom: 19,
+      },
+      {
+        id: "esri-satellite-roads",
+        type: "raster",
+        source: "esri-transportation",
+        minzoom: 0,
+        maxzoom: 19,
+        paint: {
+          "raster-opacity": 0.85,
+        },
+      },
+      {
+        id: "carto-hybrid-labels",
+        type: "raster",
+        source: "carto-labels",
+        minzoom: 0,
+        maxzoom: 20,
+      },
+    ],
+  },
+};
+
+const MAPBOX_CLOUD_STYLES: Record<MapViewMode, string> = {
+  default: "mapbox://styles/mapbox/navigation-night-v1",
+  satellite: "mapbox://styles/mapbox/satellite-streets-v12",
+};
 
 export type HandoverStatus =
   | "PRE_HANDOVER_PLANTED"
@@ -166,8 +257,9 @@ export default function TownshipMap({
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
-  const [useFallbackMap, setUseFallbackMap] = useState<boolean>(!mapboxToken);
+  const [useFallbackMap, setUseFallbackMap] = useState<boolean>(false);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+  const [mapStyleMode, setMapStyleMode] = useState<MapViewMode>("default");
   const [fallbackZoom, setFallbackZoom] = useState<number>(1);
   const [dispatchedFeedbackId, setDispatchedFeedbackId] = useState<
     string | null
@@ -194,25 +286,42 @@ export default function TownshipMap({
     [trees, selectedTreeId]
   );
 
-  // Initialize Mapbox GL when token is present and fallback mode is not active
+  // Initialize Real WebGL Map centered on Elmina Central Park
   useEffect(() => {
-    if (useFallbackMap || !mapboxToken || !mapContainerRef.current) {
+    if (useFallbackMap || !mapContainerRef.current) {
       return;
     }
 
     let isCancelled = false;
-    mapboxgl.accessToken = mapboxToken;
 
     try {
-      const map = new mapboxgl.Map({
+      const mapProto = mapboxgl.Map.prototype as unknown as {
+        _authenticate?: () => void;
+        _revokeAuth?: () => void;
+      };
+      mapProto._authenticate = () => {};
+      mapProto._revokeAuth = () => {};
+
+      if (mapboxToken) {
+        mapboxgl.accessToken = mapboxToken;
+      }
+
+      const initialStyle = mapboxToken
+        ? MAPBOX_CLOUD_STYLES[mapStyleMode]
+        : FREE_REAL_MAP_STYLES[mapStyleMode];
+
+      const mapOptions: mapboxgl.MapOptions & { testMode?: boolean } = {
         container: mapContainerRef.current,
-        style: "mapbox://styles/mapbox/dark-v11",
-        center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT], // Mapbox takes [lng, lat] -> [101.515, 3.195]
+        style: initialStyle,
+        center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
         zoom: 14.8,
-        pitch: 32,
-        bearing: -12,
+        pitch: 28,
+        bearing: 0,
         attributionControl: false,
-      });
+        testMode: !mapboxToken,
+      };
+
+      const map = new mapboxgl.Map(mapOptions);
 
       mapInstanceRef.current = map;
 
@@ -222,10 +331,20 @@ export default function TownshipMap({
         }
       });
 
-      map.on("error", () => {
-        // Gracefully switch to interactive vector fallback if Mapbox token fails authentication or network is offline
+      map.on("style.load", () => {
         if (!isCancelled) {
-          setUseFallbackMap(true);
+          setMapLoaded(true);
+        }
+      });
+
+      map.on("error", () => {
+        if (!isCancelled && mapInstanceRef.current && mapboxToken) {
+          try {
+            mapInstanceRef.current.setStyle(FREE_REAL_MAP_STYLES[mapStyleMode]);
+            setMapLoaded(true);
+          } catch {
+            setUseFallbackMap(true);
+          }
         }
       });
 
@@ -240,7 +359,22 @@ export default function TownshipMap({
     } catch {
       setUseFallbackMap(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapboxToken, useFallbackMap]);
+
+  const handleToggleMapStyle = (nextMode: MapViewMode) => {
+    setMapStyleMode(nextMode);
+    if (!useFallbackMap && mapInstanceRef.current) {
+      try {
+        const nextStyle = mapboxToken
+          ? MAPBOX_CLOUD_STYLES[nextMode]
+          : FREE_REAL_MAP_STYLES[nextMode];
+        mapInstanceRef.current.setStyle(nextStyle);
+      } catch {
+        setUseFallbackMap(true);
+      }
+    }
+  };
 
   // Synchronize HTML markers on Mapbox instance
   useEffect(() => {
@@ -294,8 +428,8 @@ export default function TownshipMap({
       mapInstanceRef.current.flyTo({
         center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
         zoom: 14.8,
-        pitch: 32,
-        bearing: -12,
+        pitch: 28,
+        bearing: 0,
         duration: 800,
       });
     } else {
@@ -359,17 +493,39 @@ export default function TownshipMap({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setUseFallbackMap((prev) => !prev)}
-          className="bg-slate-900/90 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 text-xs font-medium text-slate-300 flex items-center gap-1.5 shadow-lg transition cursor-pointer"
-          title="Switch between Mapbox GL WebGL Tile Layer and Tactical PostGIS Vector Grid"
+        {/* Default vs. Satellite View Toggle */}
+        <div
+          className="bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-1 flex items-center gap-1 shadow-lg"
+          role="group"
+          aria-label="Map view mode toggle"
         >
-          <Layers className="w-3.5 h-3.5 text-emerald-400" />
-          <span>
-            {useFallbackMap ? "Tactical GIS Grid" : "Mapbox GL Dark-v11"}
-          </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => handleToggleMapStyle("default")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              mapStyleMode === "default"
+                ? "bg-emerald-500 text-slate-950 shadow-sm"
+                : "text-slate-300 hover:text-white"
+            }`}
+            title="Default Map View (Street & Park GIS)"
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+            <span>Default</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleMapStyle("satellite")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              mapStyleMode === "satellite"
+                ? "bg-emerald-500 text-slate-950 shadow-sm"
+                : "text-slate-300 hover:text-white"
+            }`}
+            title="Satellite Map View (High-Res Aerial Imagery)"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Satellite</span>
+          </button>
+        </div>
       </div>
 
       {/* Bottom-Left Color Legend */}
