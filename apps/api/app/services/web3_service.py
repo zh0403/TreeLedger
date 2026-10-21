@@ -191,14 +191,17 @@ class Web3AuditService:
 
                 nonce = self.w3.eth.get_transaction_count(account.address, "pending")
                 chain_id = self.w3.eth.chain_id or ARBITRUM_SEPOLIA_CHAIN_ID
-                gas_price = self.w3.eth.gas_price
+                latest_block = self.w3.eth.get_block("latest")
+                base_fee = latest_block.get("baseFeePerGas", self.w3.eth.gas_price)
+                max_priority_fee = self.w3.to_wei(0.1, "gwei")
+                max_fee = int(base_fee * 2) + max_priority_fee
 
                 tx_func = contract.functions.logMaintenance(tree_id, action_type, proof_hash)
                 try:
                     estimated_gas = tx_func.estimate_gas({"from": account.address})
-                    gas_limit = int(estimated_gas * 1.2)
+                    gas_limit = int(estimated_gas * 1.3)
                 except Exception:
-                    gas_limit = 180_000
+                    gas_limit = 200_000
 
                 unsigned_tx = tx_func.build_transaction(
                     {
@@ -206,7 +209,8 @@ class Web3AuditService:
                         "from": account.address,
                         "nonce": nonce,
                         "gas": gas_limit,
-                        "gasPrice": gas_price,
+                        "maxFeePerGas": max_fee,
+                        "maxPriorityFeePerGas": max_priority_fee,
                     }
                 )
                 signed_tx = self.w3.eth.account.sign_transaction(unsigned_tx, private_key=self.private_key)

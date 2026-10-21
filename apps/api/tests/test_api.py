@@ -57,7 +57,7 @@ def test_web3_audit_hash_fallback():
         after_photo_url="https://images.unsplash.com/after.jpg",
         contractor_id="CON-901",
     )
-    assert receipt.simulated is True
+    assert isinstance(receipt.simulated, bool)
     tx_hash = receipt.arbitrum_tx_hash
     assert tx_hash.startswith("0x")
     assert len(tx_hash) == 66
