@@ -21,6 +21,7 @@ import {
   Sparkles,
   Trees,
 } from 'lucide-react';
+import TownshipTransparencyExplorer from '@/components/home/TownshipTransparencyExplorer';
 
 export default function Home() {
   // Default to 'mobile' on initial client render to prioritize mobile phones accessing via LAN
@@ -308,6 +309,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Public DLP Audit & Township Transparency Hub */}
+        <TownshipTransparencyExplorer />
 
         {/* Core Pillars / Features */}
         <section className="space-y-6">
