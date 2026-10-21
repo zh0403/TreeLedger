@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowRight,
@@ -24,46 +23,53 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const router = useRouter();
-  const [deviceType, setDeviceType] = useState<'mobile' | 'desktop'>('desktop');
-  const [isDetecting, setIsDetecting] = useState(true);
-  const [redirecting, setRedirecting] = useState(false);
+  // Default to 'mobile' on initial client render to prioritize mobile phones accessing via LAN
+  const [deviceType, setDeviceType] = useState<'mobile' | 'desktop'>('mobile');
+  const [detectionSource, setDetectionSource] = useState<string>('Auto-detecting...');
+  const [redirecting, setRedirecting] = useState<string | null>(null);
 
   useEffect(() => {
-    // Detect mobile device via user agent and screen width
-    const userAgent =
-      typeof navigator !== 'undefined'
-        ? navigator.userAgent || navigator.vendor || ''
-        : '';
-    const isMobileUA =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        userAgent
-      );
-    const isMobileScreen =
-      typeof window !== 'undefined' && window.innerWidth < 768;
+    const runDetection = () => {
+      if (typeof window === 'undefined') return;
 
-    if (isMobileUA || isMobileScreen) {
-      setDeviceType('mobile');
-    } else {
-      setDeviceType('desktop');
-    }
-    setIsDetecting(false);
+      const ua = (navigator.userAgent || navigator.vendor || '').toLowerCase();
+      const isMobileUA =
+        /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|touch|silk|fennec|windows phone/i.test(
+          ua
+        );
+      const isSmallScreen =
+        window.innerWidth <= 820 || window.screen.width <= 820;
+      const hasTouch =
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        (window.matchMedia &&
+          window.matchMedia('(pointer: coarse)').matches);
 
-    const handleResize = () => {
-      setDeviceType(window.innerWidth < 768 ? 'mobile' : 'desktop');
+      if (isMobileUA) {
+        setDeviceType('mobile');
+        setDetectionSource('Mobile User-Agent detected');
+      } else if (hasTouch && isSmallScreen) {
+        setDeviceType('mobile');
+        setDetectionSource('Touchscreen & mobile screen width');
+      } else if (isSmallScreen) {
+        setDeviceType('mobile');
+        setDetectionSource(`Viewport width (${window.innerWidth}px)`);
+      } else {
+        setDeviceType('desktop');
+        setDetectionSource('Desktop browser detected');
+      }
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    runDetection();
+    window.addEventListener('resize', runDetection);
+    return () => window.removeEventListener('resize', runDetection);
   }, []);
 
-  const handleSmartLaunch = () => {
-    setRedirecting(true);
-    if (deviceType === 'mobile') {
-      router.push('/app/explore');
-    } else {
-      router.push('/admin');
-    }
-  };
+  const targetPath = deviceType === 'mobile' ? '/app/explore' : '/admin';
+  const targetLabel =
+    deviceType === 'mobile'
+      ? 'Launch Resident Mobile PWA'
+      : 'Launch Township Command Center';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950 relative overflow-x-hidden">
@@ -93,26 +99,27 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
               <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
               <span>Arbitrum Sepolia Verified</span>
             </div>
 
-            <button
-              onClick={handleSmartLaunch}
+            <Link
+              href={targetPath}
+              onClick={() => setRedirecting(targetPath)}
               className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 active:scale-95"
             >
-              <span>{redirecting ? 'Routing...' : 'Start'}</span>
+              <span>{redirecting ? 'Loading...' : 'Start'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-20 w-full space-y-16">
-        <section className="text-center space-y-6 max-w-3xl mx-auto pt-6">
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-20 w-full space-y-14">
+        <section className="text-center space-y-6 max-w-3xl mx-auto pt-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-emerald-500/30 text-emerald-300 text-xs font-medium shadow-inner animate-fade-in">
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             <span>Master-Planned Township Forestry Management</span>
@@ -132,66 +139,132 @@ export default function Home() {
           </p>
 
           {/* Smart Device Detection & Start Card */}
-          <div className="pt-4 max-w-xl mx-auto">
-            <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl relative overflow-hidden text-left">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
+          <div className="pt-2 max-w-xl mx-auto">
+            <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl relative overflow-hidden text-left space-y-5">
+              {/* Detection Status Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0">
                     {deviceType === 'mobile' ? (
-                      <Smartphone className="w-4 h-4 text-emerald-400" />
+                      <Smartphone className="w-5 h-5 text-emerald-400" />
                     ) : (
-                      <Laptop className="w-4 h-4 text-cyan-400" />
+                      <Laptop className="w-5 h-5 text-cyan-400" />
                     )}
                   </div>
                   <div>
-                    <div className="text-xs text-slate-400 uppercase tracking-wider font-mono">
-                      Auto Device Detection
+                    <div className="text-[11px] text-slate-400 uppercase tracking-wider font-mono">
+                      Smart Device Auto-Detection
                     </div>
-                    <div className="text-sm font-semibold text-white flex items-center gap-1.5">
-                      {isDetecting ? (
-                        'Detecting your device...'
-                      ) : (
-                        <>
-                          <span>
-                            {deviceType === 'mobile'
-                              ? 'Mobile Device Detected'
-                              : 'Desktop Browser Detected'}
-                          </span>
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        </>
-                      )}
+                    <div className="text-sm font-semibold text-white flex items-center gap-2">
+                      <span>
+                        {deviceType === 'mobile'
+                          ? 'Mobile Device Active'
+                          : 'Desktop Browser Active'}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        {detectionSource}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                    {deviceType === 'mobile' ? 'Target: /app' : 'Target: /admin'}
-                  </span>
+                <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeviceType('mobile');
+                      setDetectionSource('Manual switch: Mobile');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      deviceType === 'mobile'
+                        ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>Mobile</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeviceType('desktop');
+                      setDetectionSource('Manual switch: Desktop');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      deviceType === 'desktop'
+                        ? 'bg-cyan-500 text-slate-950 font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Laptop className="w-3.5 h-3.5" />
+                    <span>Desktop</span>
+                  </button>
                 </div>
               </div>
 
+              {/* Primary Direct Start Link */}
               <div className="space-y-3">
-                <button
+                <Link
                   id="smart-start-button"
-                  onClick={handleSmartLaunch}
-                  disabled={redirecting}
+                  href={targetPath}
+                  prefetch={true}
+                  onClick={() => setRedirecting(targetPath)}
                   className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-base transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 active:scale-[0.98] group cursor-pointer"
                 >
                   <span>
-                    {redirecting
-                      ? 'Redirecting to your interface...'
-                      : deviceType === 'mobile'
-                      ? 'Launch Resident Mobile PWA'
-                      : 'Launch Township Command Center'}
+                    {redirecting ? `Loading ${redirecting}...` : targetLabel}
                   </span>
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                </button>
+                </Link>
 
-                <p className="text-[11px] text-slate-400 text-center">
-                  Clicking start routes you to the optimal view for your device.
-                  Or choose a specific portal manually below.
-                </p>
+                <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400 pt-1">
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Target: {targetPath}
+                  </span>
+                  <span>•</span>
+                  <span>Tap to enter immediately</span>
+                </div>
+              </div>
+
+              {/* Direct Quick Launch Buttons */}
+              <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-2">
+                <Link
+                  href="/app/explore"
+                  onClick={() => setRedirecting('/app/explore')}
+                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-emerald-500/30 text-left transition-colors group flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-emerald-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">
+                        Resident PWA
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        /app/explore
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                </Link>
+
+                <Link
+                  href="/admin"
+                  onClick={() => setRedirecting('/admin')}
+                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-purple-500/30 text-left transition-colors group flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4 text-purple-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">
+                        Ops Center
+                      </div>
+                      <div className="text-[10px] text-slate-400">/admin</div>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-purple-400 transition-colors" />
+                </Link>
               </div>
             </div>
           </div>
