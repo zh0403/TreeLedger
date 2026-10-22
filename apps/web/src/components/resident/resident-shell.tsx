@@ -40,6 +40,10 @@ export function ResidentShell({ children }: { children: ReactNode }) {
     return true;
   };
 
+  // These imported service routes retain main's own shell and workflows.
+  // Do not nest a second fixed navigation bar around them.
+  if (["/app/explore", "/app/hazards", "/app/maintenance"].includes(pathname)) return children;
+
   return <ReportEditorContext.Provider value={openReport}><div className="resident-shell" data-theme="light">
     <a className="skip-link" href="#resident-content">Skip to resident content</a>
     <header className="resident-header"><div className="resident-header-inner">

@@ -8,6 +8,7 @@ import { TownshipMap } from "../workspaces/township-map";
 import { residentTreeRecords, type ResidentHealthFilter, type ResidentTreeRecord } from "./resident-data";
 import { TreeDiscovery } from "./tree-discovery";
 import { useResidentReportEditor } from "./resident-shell";
+import { MainServicesLinks } from "../main-services";
 
 export function ResidentHome({ trees = residentTreeRecords }: { trees?: readonly ResidentTreeRecord[] | null }) {
   const [query, setQuery] = useState("");
@@ -26,6 +27,7 @@ export function ResidentHome({ trees = residentTreeRecords }: { trees?: readonly
     <div className="resident-explore-row"><section className="resident-map-card" aria-labelledby="resident-map-title"><div className="resident-map-heading"><div><h2 id="resident-map-title">Take a look around.</h2><p>A map is a good place to start.</p></div><Link href="/app/map" className="resident-text-link">Open explorer <ArrowUpRight size={15} aria-hidden="true" /></Link></div><div className="resident-map-preview"><TownshipMap light /></div></section>
       <aside className="resident-care-card" aria-labelledby="resident-care-title"><span className="resident-care-icon"><MessageCircle size={25} strokeWidth={1.4} aria-hidden="true" /></span><h2 id="resident-care-title">Noticed something<br /> that needs care?</h2><p>A damaged branch or a tree concern? Make a note while it’s fresh.</p><button type="button" className="resident-button resident-button--primary" onClick={openReport}>Report an issue <ArrowRight size={16} aria-hidden="true" /></button><Link href="/app/reports" className="resident-text-link"><ClipboardList size={16} aria-hidden="true" />My reports & drafts</Link><p className="resident-draft-note">Reports currently save as drafts on your device. They are not submitted.</p></aside>
     </div>
+    <section aria-labelledby="resident-services-title"><h2 id="resident-services-title">Township services</h2><p>Open the integrated registry, reporting, and maintenance prototypes. Sample fallbacks are labelled in those views.</p><MainServicesLinks /></section>
     <TreeDiscovery trees={trees} query={query} health={health} onHealth={setHealth} onReset={() => { setQuery(""); setHealth("all"); }} />
   </main>;
 }

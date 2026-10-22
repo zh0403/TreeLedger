@@ -71,7 +71,7 @@ export function AdminCommandCenter({ view, trees = adminTreeRecords }: { view: W
         const Icon = navIcons[item.view];
         return <div className="gis-tool-group" key={item.view}><Link href={workspaceHref("admin", item.view)} onClick={navigate} className="gis-tool" aria-label={item.label} title={item.label} aria-current={view === item.view && tool === null ? "page" : undefined}><Icon size={20} strokeWidth={1.5} aria-hidden="true" /><span>{item.label}</span></Link>{index === 1 && <button ref={layerButton} type="button" className="gis-tool" title="Map layers" aria-label="Map layers" aria-expanded={tool === "layers"} aria-controls="gis-layers" onClick={openLayers}><Layers3 size={20} strokeWidth={1.5} aria-hidden="true" /><span>Map layers</span></button>}</div>;
       })}
-      <Link href="/" className="gis-tool gis-home" aria-label="Back to TreeLedger" title="Back to TreeLedger"><ArrowUpRight size={19} aria-hidden="true" /><span>Back to TreeLedger</span></Link>
+      <Link href="/admin/operations" className="gis-tool gis-home" aria-label="Open operations prototype from main" title="Operations prototype"><ArrowUpRight size={19} aria-hidden="true" /><span>Operations prototype</span></Link>
     </nav>
     <main className="gis-stage" id="gis-main" tabIndex={-1} aria-label="TreeLedger geographic workspace">
       <GISMap records={trees ?? emptyRecords} basemap={basemap} showTrees={showTrees} showHealth={showHealth} opacity={opacity} selectedId={selected?.id} onSelect={selectTree} onStatus={setMapState} onViewChange={setMapView} />

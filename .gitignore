@@ -24,6 +24,3 @@ Thumbs.db
 # Blockchain / Hardhat
 cache/
 artifacts/
-
-# AI Agent instructions (local only)
-Agent.md

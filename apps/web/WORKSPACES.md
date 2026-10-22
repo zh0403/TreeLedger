@@ -11,12 +11,17 @@ Open `http://localhost:3000`.
 | Resident | `/app`, `/app/map`, `/app/profile`, `/app/reports` |
 | Contractor | `/contractor`, `/contractor/map`, `/contractor/history` |
 | Admin | `/admin`, `/admin/map`, `/admin/trees`, `/admin/maintenance`, `/admin/hazards`, `/admin/sla`, `/admin/insights` |
+| Main branch services | `/app/explore`, `/app/hazards`, `/app/maintenance`, `/contractor/tasks`, `/admin/operations` |
 
 These are frontend workspace previews, not authenticated role sessions. The role selector changes the preview; it does not grant permissions or sign anyone in. Existing authentication and backend code have not been changed.
 
 ## Connected and unavailable behavior
 
-The backend in this checkout implements only `GET /health`. It has no tree registry, work-order, report, upload, SLA, or analytics endpoints. The workspace UI therefore shows unavailable values, explicit empty states, and no fabricated operational records. It does not call guessed endpoints, invent AI classifications, or generate verification hashes.
+The merge from `origin/main` adds the existing FastAPI routes, Supabase integration, vision and Web3 services, and frontend API client. Those implementations are preserved from main; this merge does not deploy services, migrate a database, or execute blockchain transactions.
+
+The Forest Intelligence landing, new GIS console, and Nature Explorer previews retain their existing explicit empty states and local-draft behavior. Their data adapters are not automatically connected by this Git merge. The imported service views remain available at the routes above and are linked from the workspaces. They use main's existing API client and fallback datasets. A prototype disclosure warns that records, AI responses, local-only updates, and transaction hashes can be illustrative, not live or independently verified. Do not use demo outputs as audit evidence.
+
+There is only one canonical page for each URL: wx keeps `/`, `/app`, `/admin`, and `/contractor`; main's former Admin page is preserved at `/admin/operations`. The resident service routes keep their original URLs and mobile shell without nesting Nature Explorer's fixed navigation. The Contractor task queue keeps `/contractor/tasks`. Main's duplicate root redirects are superseded by wx's explicit workspace homepages.
 
 The map uses the existing `NEXT_PUBLIC_MAPBOX_TOKEN` environment variable. With a valid public token it displays a Malaysia basemap; no tree markers are created without real tree locations. Without a token, or if the map service fails, the UI displays setup/error guidance. Map errors can be retried. Restart the dev server after changing public environment configuration.
 
@@ -28,7 +33,7 @@ The default is the real Mapbox dark geographic basemap. Satellite + labels is se
 
 `components/admin/gis-data.ts` defines the presentation shape and currently supplies `null` for disconnected records, not an empty connected registry. No markers, boundaries, maintenance zones, hazards, analytical layers, charts, or compliance percentages are invented. Disconnected layer toggles are disabled. The map supports geolocated-record clustering, health styling, critical-condition exclamation markers, selection focus, and a passport when real records are supplied through the component's `trees` prop. These interactions are not live until a documented registry is integrated. HTTPS evidence links and an explicit verified source status are both required before displaying a supplied verified status; the frontend does not independently verify blockchain transactions.
 
-Still required: documented and authorized operational APIs; real tree coordinates and assessments; township boundary geometry; work orders and hazard locations; environmental measurements; and attributable audit evidence. No guessed API URLs are called. Mapbox provider credentials/permissions and network access remain necessary for basemaps.
+Still required for the new GIS console: authorized data binding to the imported service contracts, real tree assessments and coordinates, township geometry, environmental measurements, and attributable audit evidence. The console does not call guessed API URLs. Mapbox provider credentials/permissions and network access remain necessary for basemaps. Open Operations prototype from the rail to use main's existing feature view.
 
 ## Resident Nature Explorer — Phases 1 and 2
 
@@ -48,8 +53,8 @@ Photo selection creates a temporary browser preview. Photos are never uploaded o
 
 ## Integration still required
 
-The backend team must implement and document the real operational endpoints and authorization contracts before tree selection, maintenance completion, report tracking, uploads, AI triage, SLA calculations, or verification results can become live. Bind the views to those documented contracts rather than substituting mock data. The current styles and empty states deliberately preserve this distinction.
+The newer UI previews still need explicit source-aware adapters to the services now imported from main. Confirm backend availability, authorization, storage configuration, and real versus fallback provenance before connecting these views. Main's service pages and local caches are separate from wx's draft storage. Do not treat a successful frontend build as evidence that Supabase, vision, image uploads, or blockchain verification works end to end.
 
 ## Validation
 
-Run `npm run lint` and `npm run build`.
+Run `npm test` (TypeScript), `npm run lint`, and `npm run build`.
