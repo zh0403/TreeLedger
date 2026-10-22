@@ -357,7 +357,10 @@ export default function TownshipMap({
         setMapLoaded(false);
       };
     } catch {
-      setUseFallbackMap(true);
+      // Deliver the renderer failure after initialization; do not update React
+      // synchronously while the map initialization effect is running.
+      queueMicrotask(() => { if (!isCancelled) setUseFallbackMap(true); });
+      return () => { isCancelled = true; };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapboxToken, useFallbackMap]);

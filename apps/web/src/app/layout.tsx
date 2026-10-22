@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./selects.css";
+import "./input-focus.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,24 +21,19 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "TreeLedger | Civic dMRV & Urban Forestry Stewardship",
+  title: "TreeLedger | Urban Forestry OS",
   description:
-    "Pre-handover DLP tree quota audits, AI hazard triage, and Arbitrum-verified contractor proof-of-work.",
+    "A shared digital identity and maintenance record for every township tree.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      data-scroll-behavior="smooth"
+      className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
-        {children}
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

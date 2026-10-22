@@ -1,0 +1,74 @@
+/* Existing services live in their parent workspace, not a second mobile app.
+   Reuse Forest Intelligence colors/type; keep every service control intact. */
+.workspace-section-navigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px var(--page-gutter);
+  background: var(--forest-950);
+  border-bottom: 1px solid var(--forest-border);
+  color: var(--ivory-50);
+}
+.workspace-section-navigation .tl-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--sage-200);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.workspace-section-navigation .tl-nav-link[aria-current="page"] {
+  color: var(--mint-400);
+  background: var(--forest-900);
+  border-color: var(--forest-border);
+}
+.workspace-section-navigation .tl-nav-link:hover { color: var(--ivory-50); background: var(--forest-800); }
+.workspace-section-navigation .tl-nav-link:focus-visible { outline: 2px solid var(--canopy-200); outline-offset: -2px; }
+
+/* Explicitly reset semantic colors inherited from the light resident shell. */
+.integrated-service[data-theme="dark"] {
+  --background: var(--forest-950);
+  --surface: var(--forest-900);
+  --surface-raised: var(--forest-800);
+  --foreground: var(--ivory-50);
+  --muted: var(--sage-400);
+  --accent: var(--mint-400);
+  --accent-foreground: var(--forest-950);
+  --border: #c9edda24;
+  --control-border: #6b9384;
+  --focus-ring: var(--canopy-200);
+  --status-critical-text: #f08b87;
+  color-scheme: dark;
+  background: var(--background);
+  color: var(--foreground);
+  min-height: calc(100svh - 162px);
+}
+.integrated-service-inner { width: min(1180px,100%); margin-inline: auto; padding: 28px var(--page-gutter) 56px; }
+.integrated-service-heading { margin-bottom: 24px; }
+.integrated-service-heading h1 { font-size: clamp(28px,3vw,42px); font-weight: 450; line-height: 1.15; letter-spacing: -.045em; text-wrap: balance; }
+.integrated-service-heading p { max-width: 64ch; margin-top: 12px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.integrated-service .prototype-notice { padding: 16px 20px; border: 1px solid var(--border); border-radius: 14px; font-size: 12px; }
+.integrated-service .prototype-notice p { max-width: 90ch; }
+.integrated-service .prototype-notice strong { color: var(--canopy-200); }
+.integrated-service-content>div { padding: 24px 0 0; }
+.integrated-service-content :where(section,article) { min-width: 0; }
+.integrated-service-content :where(input,textarea) { color: var(--foreground); }
+.integrated-service-content :where(button,a) { touch-action: manipulation; }
+.integrated-service .integrated-service-content button { min-height: 44px; font-size: 13px; line-height: 1.4; }
+.integrated-service-content .fixed { z-index: 60; }
+/* A desktop evidence drawer stays readable; mobile keeps its original sheet. */
+@media(min-width:768px) {
+  .integrated-service-content .fixed>div { max-width: 620px; }
+}
+@media(max-width:767px) {
+  .workspace-section-navigation { gap: 4px; padding: 10px 14px; }
+  .workspace-section-navigation .tl-nav-link { padding: 8px 11px; font-size: 11px; }
+  .integrated-service-inner { padding: 18px 18px 32px; }
+  .integrated-service .prototype-notice { padding: 13px 15px; font-size: 11px; line-height: 1.7; }
+  .integrated-service-content>div { padding-top: 18px; }
+  .integrated-service-content .fixed>div { padding-bottom: max(16px,env(safe-area-inset-bottom)); }
+}

@@ -659,7 +659,12 @@ export function TownshipTransparencyExplorer() {
         setMapLoaded(false);
       };
     } catch {
-      setUseFallbackMap(true);
+      queueMicrotask(() => {
+        if (!isCancelled) setUseFallbackMap(true);
+      });
+      return () => {
+        isCancelled = true;
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapboxToken, useFallbackMap]);

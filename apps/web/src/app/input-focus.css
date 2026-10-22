@@ -1,0 +1,31 @@
+/* Composite search fields own their focus treatment. Never draw a second,
+   rectangular outline around the unbordered input inside a rounded shell. */
+:is(.field-search,.resident-discovery-search,.nature-map-search,.nature-report-search,.workspace-search,.gis-search) {
+  --search-focus-color: var(--forest-600);
+}
+
+.gis-search { --search-focus-color: var(--mint-400); }
+
+html body :is(.field-search,.resident-discovery-search,.nature-map-search,.nature-report-search,.workspace-search,.gis-search) input:is(:focus,:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+html body :is(.field-search,.resident-discovery-search,.nature-map-search,.nature-report-search,.workspace-search,.gis-search):has(input:focus) {
+  outline: none;
+  border-color: var(--search-focus-color);
+  box-shadow: inset 0 0 0 1px var(--search-focus-color);
+}
+
+/* Keyboard focus is still explicit, follows the existing corner radius, and
+   doesn't change dimensions or add the unwanted square/cyan frame. */
+html body :is(.field-search,.resident-discovery-search,.nature-map-search,.nature-report-search,.workspace-search,.gis-search):has(input:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--search-focus-color);
+}
+
+@media (forced-colors: active) {
+  html body :is(.field-search,.resident-discovery-search,.nature-map-search,.nature-report-search,.workspace-search,.gis-search):has(input:focus-visible) {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
