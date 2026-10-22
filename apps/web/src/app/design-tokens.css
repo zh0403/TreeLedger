@@ -1,9 +1,9 @@
 /* Forest Intelligence. Semantic roles also support future light workspaces. */
 :root {
-  --forest-950: #091713;
-  --forest-900: #10241d;
-  --forest-800: #12382f;
-  --mint-400: #54e0b1;
+  --forest-950: #0b1d18;
+  --forest-900: #15352b;
+  --forest-800: #1d4033;
+  --mint-400: #52d9a5;
   --canopy-200: #d5f2b4;
   --proof-400: #59c8e8;
   --ivory-50: #f5f7f2;
@@ -13,7 +13,11 @@
   /* Slightly stronger for small text on ivory: the supplied #5f7769 is 4.497:1. */
   --ink-650: #5c7567;
   --forest-600: #21654b;
-  --sage-400: #91a99e;
+  --sage-400: #9cb9ab;
+  --sage-200: #d7e6de;
+  --forest-border: #385e4e;
+  --warning-400: #e5ae50;
+  --critical-400: #e36b67;
 
   --background: var(--forest-950);
   --surface: var(--forest-900);
@@ -27,12 +31,14 @@
   --border: #c9edda24;
   --control-border: #6b9384;
   --focus-ring: var(--canopy-200);
-  --scrim: #091713e8;
-  --ambient: #54e0b115;
+  --scrim: #0b1d18ed;
+  --ambient: #52d9a515;
 
-  --status-healthy: #72d9a5;
-  --status-warning: #f0ca7c;
-  --status-critical: #ff9a92;
+  --status-healthy: var(--mint-400);
+  --status-warning: var(--warning-400);
+  --status-critical: var(--critical-400);
+  /* Preserve the requested marker red; small labels need a stronger contrast. */
+  --status-critical-text: #f08b87;
   --status-verified: var(--proof-400);
   --status-pending: #b6c4bc;
 
@@ -45,9 +51,22 @@
   --space-7: 48px;
   --space-8: 64px;
   --space-9: 96px;
-  --radius-control: 999px;
-  --radius-panel: 18px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+  --radius-panel: 16px;
+  --radius-dialog: 24px;
   --radius-small: 8px;
+  --control-height: 44px;
+  --text-caption: .75rem;
+  --text-small: .875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-title: 1.5rem;
+  --text-page: clamp(1.75rem,2.8vw,2.5rem);
+  --leading-body: 1.6;
+  --leading-heading: 1.15;
+  --nav-active: color-mix(in srgb,var(--accent) 13%,var(--background));
+  --nav-hover: color-mix(in srgb,var(--accent) 7%,var(--background));
   --shadow-panel: 0 16px 56px #020c0726;
   --duration-fast: 180ms;
   --duration-interface: 240ms;
@@ -74,6 +93,7 @@
   --status-healthy: #176b44;
   --status-warning: #805500;
   --status-critical: #a12626;
+  --status-critical-text: #a12626;
   --status-verified: #17667c;
   --status-pending: #58675e;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDown, ArrowUpRight, Fingerprint, Pause, Play } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Fingerprint } from "lucide-react";
 import type { SceneController } from "./tree-scene";
 import { demoTreeIdentity, TreePassport } from "./tree-passport";
 
@@ -15,7 +15,9 @@ function StaticTree({ hidden }: { hidden: boolean }) {
       {Array.from({ length: 500 }, (_, i) => {
         const angle = i * 2.39996;
         const radius = Math.sqrt(((i * 137) % 499) / 499);
-        return <circle key={i} cx={400 + Math.cos(angle) * radius * 205} cy={265 + Math.sin(angle) * radius * 165} r={.7 + (i % 3) * .3} fill={i % 4 ? "var(--accent)" : "var(--accent-soft)"} opacity={.25 + (i % 5) * .13} />;
+        // Fixed SVG precision keeps server/browser Math implementations from
+        // producing different attribute strings during hydration.
+        return <circle key={i} cx={(400 + Math.cos(angle) * radius * 205).toFixed(3)} cy={(265 + Math.sin(angle) * radius * 165).toFixed(3)} r={(.7 + (i % 3) * .3).toFixed(2)} fill={i % 4 ? "var(--accent)" : "var(--accent-soft)"} opacity={(.25 + (i % 5) * .13).toFixed(2)} />;
       })}
     </svg>
   );
@@ -23,12 +25,11 @@ function StaticTree({ hidden }: { hidden: boolean }) {
 
 export function DigitalTree() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const identityRef = useRef<HTMLElement>(null);
   const controller = useRef<SceneController | null>(null);
   const playbackPaused = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "fallback" | "reduced" | "lightweight">("loading");
-  const [paused, setPaused] = useState(false);
   const [passportOpen, setPassportOpen] = useState(false);
-  const [heroVisible, setHeroVisible] = useState(true);
   const [controlsHost, setControlsHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -37,15 +38,50 @@ export function DigitalTree() {
     queueMicrotask(() => { if (active && story) setControlsHost(story); });
     const hero = story?.querySelector(".hero");
     if (!hero) return;
-    const observer = new IntersectionObserver(([entry]) => setHeroVisible(entry.intersectionRatio > .3), { threshold: [0, .3] });
+    const identity = identityRef.current;
+    if (!identity) return;
+    let frame = 0;
+    let fadeStart = 0;
+    let fadeEnd = 1;
+    const update = () => {
+      frame = 0;
+      const progress = Math.max(0, Math.min(1, (window.scrollY - fadeStart) / (fadeEnd - fadeStart)));
+      const opacity = 1 - progress * progress * (3 - 2 * progress);
+      identity.style.setProperty("--identity-opacity", opacity.toFixed(4));
+      const faded = progress >= 1;
+      if (faded && identity.contains(document.activeElement)) {
+        const destination = story?.querySelector<HTMLElement>(".hero-actions a");
+        destination?.focus({ preventScroll: true });
+      }
+      identity.inert = faded;
+      identity.toggleAttribute("data-faded", faded);
+      identity.setAttribute("aria-hidden", String(faded));
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    const measure = () => {
+      const top = hero.getBoundingClientRect().top + window.scrollY;
+      fadeStart = top + 32;
+      fadeEnd = top + Math.max(33, Math.min(hero.clientHeight * .7, window.innerHeight * .72));
+      onScroll();
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(hero);
-    return () => { active = false; observer.disconnect(); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      active = false;
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
   useEffect(() => {
-    playbackPaused.current = paused || passportOpen;
+    playbackPaused.current = passportOpen;
     controller.current?.setPaused(playbackPaused.current);
-  }, [paused, passportOpen]);
+  }, [passportOpen]);
 
   useEffect(() => {
     let disposed = false;
@@ -74,16 +110,20 @@ export function DigitalTree() {
     return () => { disposed = true; generation++; media.removeEventListener("change", configure); controller.current?.dispose(); controller.current = null; };
   }, []);
 
-  const toggle = () => {
-    const next = !paused;
-    controller.current?.setPaused(next || passportOpen);
-    setPaused(next);
-  };
-
   const controls = <div className="scene-controls">
-    <a href="#record" className="scroll-cue"><span><ArrowDown size={15} aria-hidden="true" /></span>Follow the story</a>
+    <a href="#record" className="scroll-cue" onClick={(event) => {
+      const headerBottom = document.querySelector(".site-header")?.getBoundingClientRect().bottom ?? 0;
+      const next = ["record", "intelligence", "lifecycle", "community"]
+        .map((id) => document.getElementById(id))
+        .find((section) => section && section.getBoundingClientRect().top > headerBottom + 48);
+      if (!next) return;
+      event.preventDefault();
+      next.tabIndex = -1;
+      next.focus({ preventScroll: true });
+      window.history.pushState(window.history.state, "", `#${next.id}`);
+      next.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+    }}><span><ArrowDown size={15} aria-hidden="true" /></span>Follow the story</a>
     <span className="scene-status" role="status">{status === "loading" ? "Preparing the digital tree · illustrative, not live data" : status === "fallback" ? "Static illustration · 3D unavailable · not live data" : status === "reduced" ? "Static illustration · reduced motion · not live data" : status === "lightweight" ? "Lightweight illustration · not live data" : "Illustrative tree and township · not live data"}</span>
-    {status === "ready" && <button type="button" className="motion-toggle" onClick={toggle} aria-pressed={paused} aria-label={paused ? "Resume scene animation" : "Pause scene animation"}>{paused ? <Play size={13} aria-hidden="true" /> : <Pause size={13} aria-hidden="true" />}<span>{paused ? "Resume motion" : "Pause motion"}</span></button>}
   </div>;
 
   return (
@@ -92,7 +132,7 @@ export function DigitalTree() {
       <canvas ref={canvasRef} aria-hidden={status !== "ready"} aria-label="Open demo Tree Passport. Particle tree becomes an illustrative township grove on scroll." role="button" tabIndex={status === "ready" ? 0 : -1} aria-haspopup="dialog" aria-controls="tree-passport"
         onClick={(event) => { if (controller.current?.hitTest(event.clientX, event.clientY)) setPassportOpen(true); }}
         onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPassportOpen(true); } }} />
-      <aside className="tree-identity" aria-label="Demo digital tree identity" hidden={!heroVisible}>
+      <aside ref={identityRef} className="tree-identity" aria-label="Demo digital tree identity">
         <div className="identity-heading"><Fingerprint size={18} strokeWidth={1.4} aria-hidden="true" /><span>Digital Tree Identity</span><span className="identity-demo">Demo</span></div>
         <dl><div><dt>Tree ID</dt><dd>{demoTreeIdentity.id}</dd></div><div><dt>Health status</dt><dd>{demoTreeIdentity.health}</dd></div><div><dt>Verification</dt><dd>{demoTreeIdentity.verification}</dd></div></dl>
         <button type="button" onClick={() => setPassportOpen(true)} aria-haspopup="dialog" aria-controls="tree-passport">Open Tree Passport <ArrowUpRight size={15} aria-hidden="true" /></button>

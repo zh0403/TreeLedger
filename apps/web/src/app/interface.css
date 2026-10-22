@@ -1,0 +1,50 @@
+/* Shared foundation only. Geographic composition and workflow layouts stay local. */
+.tl-brand { display: inline-flex; align-items: center; gap: 10px; min-height: var(--control-height); flex-shrink: 0; color: var(--foreground); }
+.tl-brand > svg { color: var(--accent); flex-shrink: 0; }
+.tl-brand > span { font-size: 21px; font-weight: 550; line-height: 1.2; letter-spacing: -.7px; }
+.tl-brand small { display: block; margin-top: 4px; color: var(--muted); font-size: var(--text-caption); font-weight: 400; letter-spacing: 0; }
+.tl-navigation { --nav-active: color-mix(in srgb,var(--accent) 13%,var(--background)); --nav-hover: color-mix(in srgb,var(--accent) 7%,var(--background)); }
+.tl-navigation .tl-nav-link { min-height: var(--control-height); border-radius: var(--radius-control); color: var(--muted); transition: color var(--duration-fast),background var(--duration-fast),border-color var(--duration-fast); }
+.tl-navigation .tl-nav-link:hover { color: var(--foreground); background: var(--nav-hover); }
+.tl-navigation .tl-nav-link[aria-current="page"] { color: var(--accent); background: var(--nav-active); }
+.tl-navigation .tl-nav-link:focus-visible,.tl-brand:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.tl-navigation .tl-nav-link svg { stroke-width: 1.5; flex-shrink: 0; }
+.tl-navigation small { font-size: var(--text-caption); color: var(--muted); line-height: 1.4; }
+.tl-brand.workspace-mobile-brand { display: none; }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+.status-badge.status-badge--critical { color: var(--status-critical-text); }
+.status-badge--critical > span { background: var(--status-critical); }
+.legacy-app :is(.text-red-300,.text-red-400,.text-red-500,.text-rose-400,.text-rose-500) { color: var(--status-critical-text); }
+.button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+:where(input,select,textarea):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.prototype-notice { padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: var(--text-caption); line-height: var(--leading-body); }
+.prototype-notice strong { color: var(--foreground); font-weight: 550; }
+.prototype-notice a { display: inline-flex; align-items: center; min-height: var(--control-height); color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+.service-navigation { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 0; }
+.service-navigation .tl-nav-link { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px solid var(--border); font-size: var(--text-small); }
+
+/* Legacy service pages keep their DOM, controls and handlers. The old Tailwind
+   palette is aliased in globals.css rather than duplicating every workflow. */
+.service-shell { min-height: 100svh; background: var(--background); color: var(--foreground); }
+.service-shell-inner { max-width: 480px; margin: auto; min-height: 100svh; border-inline: 1px solid var(--border); padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+.service-header { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: var(--background); border-bottom: 1px solid var(--border); }
+.service-header .tl-brand > span { font-size: 19px; }
+.service-header .service-role-link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; min-height: var(--control-height); border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--accent); font-size: var(--text-caption); }
+.service-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 40; width: 100%; max-width: 480px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; padding: 8px 8px max(8px,env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--background); }
+.service-tabs .tl-nav-link { display: flex; min-height: 64px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 6px 2px; text-align: center; font-size: var(--text-caption); line-height: 1.25; }
+.service-tabs small { font-size: 10px; }
+.legacy-app :where(button,input,select,textarea) { border-radius: var(--radius-control); }
+.legacy-app :where(button,select,input:not([type="file"])) { min-height: var(--control-height); }
+.legacy-app :where(h1,h2,h3) { letter-spacing: -.025em; }
+.legacy-app :where(.rounded-2xl,.rounded-3xl) { border-radius: var(--radius-panel); }
+.legacy-app :where(.text-\[9px\],.text-\[10px\],.text-\[11px\]) { font-size: var(--text-caption); line-height: 1.5; }
+.legacy-app :where(.shadow-2xl,.shadow-xl,.shadow-lg) { box-shadow: var(--shadow-panel); }
+.legacy-app button.bg-emerald-600 { color: var(--ivory-50); }
+@media(max-width:767px) {
+  .tl-brand.workspace-mobile-brand { display: inline-flex; }
+  .legacy-app :where(input,select,textarea) { font-size: var(--text-body); }
+  .service-header .tl-brand small { max-width: 170px; font-size: 11px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .tl-navigation .tl-nav-link { transition: none; }
+}

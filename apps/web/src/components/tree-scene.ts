@@ -20,7 +20,9 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
   scene.add(tree);
   const uniforms = {
     uTime: { value: 0 }, uPixelRatio: { value: 1 }, uState: { value: 0 },
-    uTownship: { value: 0 }, uReveal: { value: 0 },
+    uTownship: { value: 0 }, uLedger: { value: 0 }, uReveal: { value: 0 },
+    uPointer: { value: new Vector2() }, uHover: { value: 0 },
+    uHoverRadius: { value: .3 }, uAspect: { value: 1 },
     uEmerald: { value: colorToken("--mint-400") },
     uCanopy: { value: colorToken("--canopy-200") },
     uProof: { value: colorToken("--proof-400") },
@@ -34,8 +36,8 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
   const pickGeometry = new SphereGeometry(1, 12, 8);
   const pickMaterial = new MeshBasicMaterial({ visible: false });
   const crown = new Mesh(pickGeometry, pickMaterial);
-  crown.position.set(0, 3.4, 0);
-  crown.scale.set(2.5, 2, 2.5);
+  crown.position.set(0, 3.65, 0);
+  crown.scale.set(3.1, 1.7, 3.1);
   const trunkPick = new Mesh(pickGeometry, pickMaterial);
   trunkPick.position.y = 1.2;
   trunkPick.scale.set(.35, 1.25, .35);
@@ -68,6 +70,7 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const pointer = { x: 0, y: 0 };
   const follow = { x: 0, y: 0 };
+  const hover = { active: false, target: new Vector2() };
   const lookAt = new Vector3(0, 2.15, 0);
   let paused = false;
   let visible = true;
@@ -82,12 +85,15 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
   let viewportHeight = 0;
   let rootTop = 0;
   let scrollRange = 1;
+  let ledgerStart = .75;
+  let ledgerEnd = .9;
   const smoothstep = (a: number, b: number, value: number) => {
     const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
 
   const readScroll = () => {
+    hover.active = false;
     targetProgress = Math.max(0, Math.min(1, (window.scrollY - rootTop) / scrollRange));
     root.style.setProperty("--story-progress", String(targetProgress));
   };
@@ -103,14 +109,18 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
       follow.x += (pointer.x - follow.x) * ease;
       follow.y += (pointer.y - follow.y) * ease;
       progress += (targetProgress - progress) * ease;
+      // Frame-rate independent easing, without CPU-side particle updates.
+      uniforms.uPointer.value.lerp(hover.target, 1 - Math.exp(-dt * 18));
+      uniforms.uHover.value += ((hover.active ? 1 : 0) - uniforms.uHover.value) * (1 - Math.exp(-dt * 9));
     }
     const p = reducedMotion.matches ? 0 : progress;
     const township = smoothstep(.4, .6, p) * (1 - smoothstep(.76, .94, p));
+    const ledger = smoothstep(ledgerStart, ledgerEnd, p);
     const phone = viewportWidth < 768;
-    const angle = .12 + p * 1.05 + follow.x * .1;
+    const angle = (.12 + p * 1.05) * (1 - ledger) + .42 * ledger + follow.x * .1;
     // Fit the whole crown on portrait screens instead of cropping a desktop camera.
     const portraitDistance = Math.max(14, 6.8 / (2 * Math.tan(Math.PI / 9) * camera.aspect));
-    const distance = (phone ? portraitDistance : 12) - Math.sin(p * Math.PI) * .6;
+    const distance = (phone ? portraitDistance * (1 + ledger * .2) : 12) - Math.sin(p * Math.PI) * .6;
     camera.position.set(Math.sin(angle) * distance, 4.2 + township * 5 + follow.y * .4, Math.cos(angle) * distance);
     lookAt.set(0, 2.9 - township * 2.1, 0);
     camera.lookAt(lookAt);
@@ -122,6 +132,7 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
     uniforms.uTime.value = elapsed;
     uniforms.uState.value = Math.sin(p * Math.PI);
     uniforms.uTownship.value = township;
+    uniforms.uLedger.value = ledger;
     uniforms.uReveal.value = reducedMotion.matches ? 1 : smoothstep(0, 1.8, elapsed);
     tree.rotation.y = follow.x * .08;
     tree.rotation.z = -follow.x * .012;
@@ -131,6 +142,7 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
     renderer.render(scene, camera);
     canvas.dataset.progress = p.toFixed(3);
     canvas.dataset.township = township.toFixed(3);
+    canvas.dataset.ledger = ledger.toFixed(3);
     if (!still) frame = requestAnimationFrame(draw);
   };
   const schedule = () => { if (!frame && !disposed && !failed && visible && !document.hidden) frame = requestAnimationFrame(draw); };
@@ -143,14 +155,23 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
     renderer.setSize(viewportWidth, viewportHeight, false);
     uniforms.uPixelRatio.value = ratio;
     camera.aspect = viewportWidth / viewportHeight;
+    uniforms.uAspect.value = camera.aspect;
+    uniforms.uHoverRadius.value = Math.min(.45, 280 / viewportHeight);
     camera.updateProjectionMatrix();
     rootTop = root.getBoundingClientRect().top + window.scrollY;
     scrollRange = Math.max(1, root.offsetHeight - window.innerHeight);
+    const proof = root.querySelector<HTMLElement>("#lifecycle");
+    if (proof) {
+      const proofTop = proof.getBoundingClientRect().top + window.scrollY - rootTop;
+      // Measure the actual chapter so mobile's taller story panels stay in sync.
+      ledgerStart = Math.max(0, (proofTop - viewportHeight * .8) / scrollRange);
+      ledgerEnd = Math.max(ledgerStart + .01, (proofTop - viewportHeight * .12) / scrollRange);
+    }
     readScroll();
     schedule();
   };
   const hitTest = (x: number, y: number) => {
-    if (disposed || failed || uniforms.uTownship.value > .25) return false;
+    if (disposed || failed || uniforms.uTownship.value > .25 || uniforms.uLedger.value > .25) return false;
     const bounds = canvas.getBoundingClientRect();
     pickPointer.set((x - bounds.left) / bounds.width * 2 - 1, -(y - bounds.top) / bounds.height * 2 + 1);
     raycaster.setFromCamera(pickPointer, camera);
@@ -158,13 +179,21 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
   };
   const pointerMove = (event: PointerEvent) => {
     if (event.target === canvas && event.pointerType !== "touch") canvas.style.cursor = hitTest(event.clientX, event.clientY) ? "pointer" : "default";
-    if (event.pointerType === "touch" || paused || reducedMotion.matches) return;
+    if (event.pointerType === "touch") { hover.active = false; return; }
+    if (paused || reducedMotion.matches) return;
+    hover.active = event.target === canvas;
+    if (hover.active) {
+      const bounds = canvas.getBoundingClientRect();
+      hover.target.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -(event.clientY - bounds.top) / bounds.height * 2 + 1);
+      // Enter at the actual cursor, then ease subsequent movement.
+      if (uniforms.uHover.value < .001) uniforms.uPointer.value.copy(hover.target);
+    }
     pointer.x = event.clientX / window.innerWidth * 2 - 1;
     pointer.y = event.clientY / window.innerHeight * 2 - 1;
   };
-  const resetPointer = () => { pointer.x = 0; pointer.y = 0; };
+  const resetPointer = () => { pointer.x = 0; pointer.y = 0; hover.active = false; };
   const visibility = () => {
-    if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
+    if (document.hidden) { resetPointer(); uniforms.uHover.value = 0; cancelAnimationFrame(frame); frame = 0; }
     else { previous = performance.now(); schedule(); }
   };
   const motionChange = () => { follow.x = 0; follow.y = 0; resetPointer(); schedule(); };
@@ -193,7 +222,11 @@ export function mountTreeScene(canvas: HTMLCanvasElement, onFailure: () => void)
 
   return {
     hitTest,
-    setPaused(value) { paused = value; previous = performance.now(); schedule(); },
+    setPaused(value) {
+      paused = value;
+      if (value) { hover.active = false; uniforms.uHover.value = 0; }
+      previous = performance.now(); schedule();
+    },
     dispose() {
       disposed = true;
       cancelAnimationFrame(frame);

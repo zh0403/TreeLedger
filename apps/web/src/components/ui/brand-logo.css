@@ -1,0 +1,14 @@
+.tl-brand-logo {
+  display: block;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--canopy-200);
+}
+
+@media (max-width: 767px) {
+  .tl-brand-logo { width: 32px; height: 32px; padding: 2px; border-radius: 8px; }
+}

@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight, Fingerprint, Leaf, MapPin, QrCode, ShieldChec
 import { DigitalTree } from "@/components/digital-tree";
 import { ScrollReveals } from "@/components/scroll-reveals";
 import { SiteHeader } from "@/components/site-header";
+import { Brand } from "@/components/ui/brand";
 import { ButtonLink } from "@/components/ui/button-link";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -23,13 +24,12 @@ export default function Home() {
           <div className="scene-sticky"><DigitalTree /><div className="scene-vignette" /><div className="scene-progress" aria-hidden="true"><span /></div></div>
           <div className="story-content">
             <section className="hero story-panel" aria-labelledby="hero-title">
-              <div className="hero-topline"><span>Forest Intelligence</span><span>Nature meets verifiable technology</span></div>
+              <div className="hero-topline"><span>Forest Intelligence</span></div>
               <div className="hero-copy">
                 <h1 id="hero-title">Every tree<br />has a story.<br />Every action<br />leaves proof.</h1>
                 <p className="hero-description">Transforming township greenery into a living, verifiable digital ecosystem.</p>
                 <div className="hero-actions"><ButtonLink href="#workspaces">Explore TreeLedger <ArrowRight size={17} aria-hidden="true" /></ButtonLink><ButtonLink href="/app/map" variant="secondary">View Live Tree Map <ArrowUpRight size={16} aria-hidden="true" /></ButtonLink></div>
               </div>
-              <div className="hero-footer"><p>From one living tree<br />to a connected township.</p></div>
             </section>
 
             <section className="identity-chapter story-panel" id="record" aria-labelledby="identity-title">
@@ -73,7 +73,7 @@ export default function Home() {
           <p className="platform-footnote">Residents discover and report. Contractors document care. Township teams review the evidence.</p>
         </section>
       </main>
-      <footer className="site-footer"><a href="#overview" className="wordmark"><Leaf size={21} aria-hidden="true" />TreeLedger</a><p>Urban forestry & municipal SLA verification.</p><a href="#overview">Back to the canopy <ArrowUpRight size={15} aria-hidden="true" /></a></footer>
+      <footer className="site-footer"><Brand href="#overview" className="wordmark" /><p>Urban forestry & municipal SLA verification.</p><a href="#overview">Back to the canopy <ArrowUpRight size={15} aria-hidden="true" /></a></footer>
     </div>
   );
 }

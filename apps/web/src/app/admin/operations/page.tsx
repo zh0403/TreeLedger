@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { MainPrototypeNotice } from "@/components/main-services";
+import { Brand } from "@/components/ui/brand";
 import TownshipMap, {
   TreeAsset,
   HandoverStatus,
@@ -726,29 +727,14 @@ export default function TownshipAdminCommandCenter() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="legacy-app min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-200" data-theme="dark">
       <MainPrototypeNotice home="/admin" />
       {/* Top Executive Navigation Bar */}
       <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shadow-inner">
-              <Trees className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-lg font-bold tracking-tight text-white">
-                  TreeLedger — Township Operations Command Center
-                </h1>
-                <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  City of Elmina · Prototype
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Geospatial PostGIS Canopy Registry, Pre-Handover DLP Verification
-                &amp; Arbitrum Sepolia Contractor SLA Ledger
-              </p>
-            </div>
+            <Brand href="/admin" subtitle="City of Elmina · Operations prototype" />
+            <h1 className="sr-only">Township Operations Command Center</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">

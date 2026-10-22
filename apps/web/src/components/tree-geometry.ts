@@ -1,9 +1,13 @@
 import { BufferGeometry, CubicBezierCurve3, Float32BufferAttribute, Vector3 } from "three";
+import { createLedgerTargets } from "./tree-ledger";
 
 /** A seeded, botanical form. This is visual geometry, never township record data. */
 export function createTreeGeometry(compact: boolean) {
   let seed = 7391;
   const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  // Keep the silhouette independent of particle counts and mobile sampling.
+  let growthSeed = 1949;
+  const growth = () => ((growthSeed = (growthSeed * 16807) % 2147483647) - 1) / 2147483646;
   const positions: number[] = [];
   const phases: number[] = [];
   const sizes: number[] = [];
@@ -40,34 +44,44 @@ export function createTreeGeometry(compact: boolean) {
     }
     return curve;
   };
-  const foliage = (center: Vector3, radius: number) => {
-    const count = compact ? 48 : 104;
+  const foliage = (center: Vector3, radius: number, density = 1, vertical = .8) => {
+    // Spend the larger desktop budget on leaves, not thicker branch outlines.
+    const count = Math.round((compact ? 52 : 190) * density);
     for (let i = 0; i < count; i++) {
       const angle = random() * Math.PI * 2;
       const v = random() * 2 - 1;
       const r = Math.cbrt(random()) * radius;
       const spread = Math.sqrt(1 - v * v);
-      point(new Vector3(center.x + Math.cos(angle) * spread * r, center.y + v * r * .9, center.z + Math.sin(angle) * spread * r), true);
+      point(new Vector3(center.x + Math.cos(angle) * spread * r, center.y + v * r * vertical, center.z + Math.sin(angle) * spread * r), true);
     }
   };
-  const branch = (start: Vector3, length: number, angle: number, depth: number) => {
-    const end = start.clone().add(new Vector3(Math.cos(angle) * length * .8, length * (.8 + random() * .35), Math.sin(angle) * length * .8));
-    tube(start, end, .024 * (depth + 1), Math.round((compact ? 75 : 180) * length));
+  const branch = (start: Vector3, length: number, angle: number, depth: number, lift = .46 + growth() * .18) => {
+    const end = start.clone().add(new Vector3(Math.cos(angle) * length * .86, length * lift, Math.sin(angle) * length * .86));
+    const limb = tube(start, end, .026 * (depth + 1), Math.round((compact ? 75 : 180) * length));
     if (depth === 0) {
-      foliage(end, .38 + random() * .24);
+      foliage(end, .5 + growth() * .18);
       return;
     }
-    for (let i = 0; i < 3; i++) branch(end, length * (.47 + random() * .14), angle + (i - 1) * .95 + (random() - .5) * .45, depth - 1);
+    // Smaller interior clusters fill gaps between the terminal leaf masses
+    // while retaining visible branching and an irregular, organic silhouette.
+    if (depth === 1) foliage(limb.getPoint(.7), .48, .65);
+    for (let i = 0; i < 3; i++) branch(end, length * (.5 + growth() * .1), angle + (i - 1) * .9 + (growth() - .5) * .35, depth - 1);
   };
-  const trunk = tube(new Vector3(0, .08, 0), new Vector3(.13, 2.75, -.09), .18, compact ? 1800 : 4000);
-  for (let i = 0; i < 8; i++) {
+  const trunk = tube(new Vector3(0, .08, 0), new Vector3(.13, 2.75, -.09), .22, compact ? 1800 : 4000);
+  for (let i = 0; i < 9; i++) {
     const angle = i * 2.39996;
     // Branches emerge from the actual curved trunk, not a disconnected axis.
-    const start = trunk.getPoint(.48 + i * .055);
-    branch(start, 1.12 + random() * .48, angle, 3);
+    const start = trunk.getPoint(.43 + i * .05);
+    branch(start, 1.48 - i / 8 * .25 + growth() * .12, angle, 3, .78 + i / 8 * .23 + growth() * .06);
   }
   // Upward growth closes the crown without turning it into a geometric sphere.
-  for (let i = 0; i < 3; i++) branch(trunk.getPoint(1), .65, i * 2.094, 2);
+  for (let i = 0; i < 3; i++) branch(trunk.getPoint(1), 1.02, i * 2.094, 2, .95);
+  // Overlapping ellipsoidal leaf masses make a continuous, slightly domed
+  // mature crown, rather than isolated balls on the ends of bare branches.
+  foliage(new Vector3(.05, 3.7, 0), 1.5, 28, .85);
+  foliage(new Vector3(-.5, 4.3, .2), 1.23, 20, .85);
+  foliage(new Vector3(.55, 4.35, -.2), 1.21, 20, .85);
+  foliage(new Vector3(.08, 4.75, .05), 1, 16);
   for (let i = 0; i < 7; i++) {
     const angle = i * .8976;
     tube(new Vector3(0, .22, 0), new Vector3(Math.cos(angle) * (1 + random() * .25), .025, Math.sin(angle) * 1.05), .055, compact ? 100 : 220);
@@ -83,6 +97,9 @@ export function createTreeGeometry(compact: boolean) {
   }
   geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
   geometry.setAttribute("aTownship", new Float32BufferAttribute(townshipPositions, 3));
+  const ledger = createLedgerTargets(positions.length / 3, positions);
+  geometry.setAttribute("aLedger", new Float32BufferAttribute(ledger.positions, 3));
+  geometry.setAttribute("aLedgerRole", new Float32BufferAttribute(ledger.roles, 1));
   geometry.setAttribute("aPhase", new Float32BufferAttribute(phases, 1));
   geometry.setAttribute("aSize", new Float32BufferAttribute(sizes, 1));
   geometry.setAttribute("aKind", new Float32BufferAttribute(kinds, 1));

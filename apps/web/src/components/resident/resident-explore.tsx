@@ -1,0 +1,31 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useState } from "react";
+import { ArrowRight, Fingerprint, Leaf, List, Map as MapIcon, Search, ShieldCheck, TreePine, X } from "lucide-react";
+import { ResidentMap } from "./resident-map";
+import { filterResidentTrees, residentHealthLabels, residentTreeRecords, type ResidentHealthFilter, type ResidentTreeRecord } from "./resident-data";
+import { StatusBadge } from "../ui/status-badge";
+
+export function ResidentExplore({ trees = residentTreeRecords }: { trees?: readonly ResidentTreeRecord[] | null }) {
+  const [query, setQuery] = useState("");
+  const [species, setSpecies] = useState("all");
+  const [health, setHealth] = useState<ResidentHealthFilter>("all");
+  const [list, setList] = useState(false);
+  const [selected, setSelected] = useState<ResidentTreeRecord>();
+  const select = useCallback((tree: ResidentTreeRecord | undefined) => setSelected(tree),[]);
+  const filtered = trees === null ? null : filterResidentTrees(trees,query,health,species);
+  const speciesOptions = [...new Set((trees ?? []).map(tree => tree.species ?? tree.scientificName).filter((value): value is string => !!value))].sort();
+  const reportLink = selected ? `/app/report?${new URLSearchParams({ tree: selected.id, place: selected.location ?? "" })}` : "/app/report";
+  return <main className={`nature-explore${list ? " is-list" : ""}`} aria-labelledby="nature-explore-title">
+    <div className="nature-map-stage"><ResidentMap trees={filtered} onList={() => setList(true)} selectedTreeId={selected?.id ?? null} onSelect={select} showPreview={false} /></div>
+    <div className="nature-map-toolbar"><div className="nature-map-title"><Leaf size={21} strokeWidth={1.4} aria-hidden="true" /><h1 id="nature-explore-title">Explore your canopy.</h1></div><label className="nature-map-search"><Search size={18} aria-hidden="true" /><span className="resident-sr-only">Search trees</span><input type="search" value={query} placeholder="Tree, species, or place" onChange={event => { setQuery(event.target.value); setSelected(undefined); }} /></label><label className="nature-map-filter"><span className="resident-sr-only">Filter species</span><select aria-label="Filter species" value={species} disabled={!speciesOptions.length} onChange={event => { setSpecies(event.target.value); setSelected(undefined); }}><option value="all">All species</option>{speciesOptions.map(value => <option key={value}>{value}</option>)}</select></label><label className="nature-map-filter"><span className="resident-sr-only">Filter health</span><select aria-label="Filter health" value={health} onChange={event => { setHealth(event.target.value as ResidentHealthFilter); setSelected(undefined); }}><option value="all">All health</option>{Object.entries(residentHealthLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><div className="nature-view-switch" role="group" aria-label="Explorer view"><button type="button" aria-pressed={!list} onClick={() => setList(false)}><MapIcon size={16} aria-hidden="true" />Map</button><button type="button" aria-pressed={list} onClick={() => setList(true)}><List size={16} aria-hidden="true" />List</button></div></div>
+    {list && <section className="nature-explore-list" aria-label="Tree search results"><h2>Tree identities</h2><p role="status">{filtered === null ? "Tree profiles are not connected yet." : `${filtered.length} tree profiles match your filters.`}</p>{filtered?.length ? filtered.map(tree => <button type="button" key={tree.id} onClick={() => setSelected(tree)} aria-pressed={selected?.id === tree.id}><TreePine size={24} strokeWidth={1.3} aria-hidden="true" /><span><strong>{tree.commonName ?? tree.species ?? tree.id}</strong><small>{tree.id} · {tree.location ?? "Location not supplied"}</small></span><ArrowRight size={16} aria-hidden="true" /></button>) : <div className="nature-explore-list-empty"><Leaf size={35} strokeWidth={1.2} aria-hidden="true" /><h3>{trees === null ? "A map to explore. More stories to come." : trees.length ? "No matching trees." : "No tree profiles added yet."}</h3><p>{trees === null ? "You can explore the geographic map or prepare a local tree concern while the registry is disconnected." : "Try another search or filter."}</p><Link href="/app/report">Write a report <ArrowRight size={16} aria-hidden="true" /></Link></div>}</section>}
+    <aside className={`nature-passport${selected ? " has-selection" : ""}`} aria-label="Tree Passport panel">
+      <div className="nature-passport-heading"><Fingerprint size={20} strokeWidth={1.4} aria-hidden="true" /><span>Tree Passport</span>{selected && <button type="button" aria-label="Close selected tree" onClick={() => setSelected(undefined)}><X size={17} aria-hidden="true" /></button>}</div>
+      {selected ? <><h2>{selected.commonName ?? selected.species ?? "Tree identity"}</h2><p className="nature-passport-species">{selected.scientificName ?? selected.species ?? "Species not provided"}</p><StatusBadge tone={selected.health === "healthy" ? "healthy" : selected.health === "critical" ? "critical" : selected.health === "attention" ? "warning" : "pending"}>{selected.health ? residentHealthLabels[selected.health] : "Not assessed"}</StatusBadge><dl><div><dt>Tree ID</dt><dd>{selected.id}</dd></div><div><dt>Location</dt><dd>{selected.location ?? "Not provided"}</dd></div></dl><div className="nature-passport-history"><ShieldCheck size={17} aria-hidden="true" /><p>Maintenance history and verification evidence are not connected for this profile. No verified record is claimed.</p></div></> : <div className="nature-passport-prompt"><TreePine size={40} strokeWidth={1.1} aria-hidden="true" /><h2>Start with a tree.</h2><p>Select a connected marker or tree from the list to see its identity and available care information.</p></div>}
+      <Link href={reportLink} className="resident-button resident-button--primary">Report a tree concern <ArrowRight size={16} aria-hidden="true" /></Link>
+    </aside>
+    <p className="nature-map-status" role="status"><span />{trees === null ? "Tree registry not connected · geographic exploration is available" : `${filtered?.length ?? 0} available profiles · only supplied coordinates are mapped`}</p>
+  </main>;
+}

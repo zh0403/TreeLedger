@@ -1,10 +1,10 @@
 import React from 'react';
-import { MobileShell } from '@/components/mobile/MobileShell';
+import { ServiceWorkspace } from '@/components/workspaces/service-workspace';
 
 export default function ContractorAppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <MobileShell role="contractor">{children}</MobileShell>;
+  return <ServiceWorkspace role="contractor">{children}</ServiceWorkspace>;
 }

@@ -9,6 +9,8 @@ import { adminTreeRecords, type AdminTreeRecord, type Basemap, type MapState, ty
 import { GISMap } from "./gis-map";
 import { adminViewLabels, ConnectionPanel, IntelligencePanel, LayerPanel, OperationPanel } from "./gis-panels";
 import "./admin-gis.css";
+import { Brand } from "../ui/brand";
+import { Navigation, NavigationLink } from "../ui/navigation";
 
 const emptyRecords: readonly AdminTreeRecord[] = [];
 const navIcons = { overview: Compass, map: Map, trees: Trees, maintenance: Wrench, hazards: TriangleAlert, sla: ShieldCheck, insights: Leaf };
@@ -62,17 +64,17 @@ export function AdminCommandCenter({ view, trees = adminTreeRecords }: { view: W
   }}>
     <a className="skip-link" href="#gis-main">Skip to geographic workspace</a>
     <header className="gis-header">
-      <Link href="/" className="gis-brand"><Leaf size={23} strokeWidth={1.5} aria-hidden="true" /><span>TreeLedger</span><small>Geospatial intelligence</small></Link>
+      <Brand href="/" className="gis-brand" subtitle="Geospatial intelligence" />
       <div className="gis-header-region"><Map size={15} aria-hidden="true" /><span>Malaysia overview</span><span className="gis-region-tag">Regional view</span></div>
       <div className="gis-header-actions"><button ref={connectionButton} className="gis-connection-button" type="button" aria-label="View data connection details" aria-expanded={tool === "connection"} onClick={() => { setTool(current => current === "connection" ? null : "connection"); if (matchMedia("(max-width:759px)").matches) setInspectorOpen(false); }}><Unplug size={15} aria-hidden="true" /><span>{trees === null ? "Records disconnected" : "Tree registry connected"}</span></button><label className="gis-role-switch"><span>Workspace preview</span><select aria-label="Choose workspace preview" value="admin" onChange={event => router.push(workspaceConfig[event.target.value as WorkspaceRole].base)}><option value="admin">Admin</option><option value="resident">Resident</option><option value="contractor">Contractor</option></select><ChevronDown size={12} aria-hidden="true" /></label></div>
     </header>
-    <nav className="gis-rail" aria-label="Admin GIS tools">
+    <Navigation className="gis-rail" label="Admin GIS tools">
       {workspaceConfig.admin.navigation.map((item, index) => {
         const Icon = navIcons[item.view];
-        return <div className="gis-tool-group" key={item.view}><Link href={workspaceHref("admin", item.view)} onClick={navigate} className="gis-tool" aria-label={item.label} title={item.label} aria-current={view === item.view && tool === null ? "page" : undefined}><Icon size={20} strokeWidth={1.5} aria-hidden="true" /><span>{item.label}</span></Link>{index === 1 && <button ref={layerButton} type="button" className="gis-tool" title="Map layers" aria-label="Map layers" aria-expanded={tool === "layers"} aria-controls="gis-layers" onClick={openLayers}><Layers3 size={20} strokeWidth={1.5} aria-hidden="true" /><span>Map layers</span></button>}</div>;
+        return <div className="gis-tool-group" key={item.view}><NavigationLink href={workspaceHref("admin", item.view)} onClick={navigate} className="gis-tool" aria-label={item.label} title={item.label} aria-current={view === item.view && tool === null ? "page" : undefined}><Icon size={20} strokeWidth={1.5} aria-hidden="true" /><span>{item.label}</span></NavigationLink>{index === 1 && <button ref={layerButton} type="button" className="gis-tool" title="Map layers" aria-label="Map layers" aria-expanded={tool === "layers"} aria-controls="gis-layers" onClick={openLayers}><Layers3 size={20} strokeWidth={1.5} aria-hidden="true" /><span>Map layers</span></button>}</div>;
       })}
-      <Link href="/admin/operations" className="gis-tool gis-home" aria-label="Open operations prototype from main" title="Operations prototype"><ArrowUpRight size={19} aria-hidden="true" /><span>Operations prototype</span></Link>
-    </nav>
+      <NavigationLink href="/admin/operations" className="gis-tool gis-home" aria-label="Open operations prototype from main" title="Operations prototype"><ArrowUpRight size={19} aria-hidden="true" /><span>Operations prototype</span></NavigationLink>
+    </Navigation>
     <main className="gis-stage" id="gis-main" tabIndex={-1} aria-label="TreeLedger geographic workspace">
       <GISMap records={trees ?? emptyRecords} basemap={basemap} showTrees={showTrees} showHealth={showHealth} opacity={opacity} selectedId={selected?.id} onSelect={selectTree} onStatus={setMapState} onViewChange={setMapView} />
       <div className="gis-view-heading"><div><Crosshair size={14} aria-hidden="true" /><span>Forest operations</span></div><h1>{adminViewLabels[view]}</h1><p>Malaysia / regional geographic context</p></div>
