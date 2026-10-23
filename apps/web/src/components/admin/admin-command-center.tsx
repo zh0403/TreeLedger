@@ -625,6 +625,7 @@ export function AdminCommandCenter({
           <div
             role="group"
             aria-label="Workspace display mode"
+            className="gis-mode-switch"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -655,7 +656,9 @@ export function AdminCommandCenter({
               }}
             >
               <MapIcon size={14} aria-hidden="true" />
-              <span>Map View</span>
+              <span>
+                Map<em className="gis-mode-view-word"> View</em>
+              </span>
             </button>
             <button
               type="button"
@@ -677,7 +680,9 @@ export function AdminCommandCenter({
               }}
             >
               <Table2 size={14} aria-hidden="true" />
-              <span>Table View</span>
+              <span>
+                Table<em className="gis-mode-view-word"> View</em>
+              </span>
             </button>
           </div>
 
@@ -785,6 +790,7 @@ export function AdminCommandCenter({
         {displayMode === "table" ? (
           <section
             aria-label="Fullscreen operational data tables"
+            className="gis-table-overlay"
             style={{
               position: "absolute",
               inset: "0 0 33px 0",
@@ -833,7 +839,15 @@ export function AdminCommandCenter({
                 </h2>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                className="gis-table-tabs"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 {(
                   [
                     ["trees", `Tree Registry (${treeList?.length ?? 40})`],
@@ -1133,6 +1147,7 @@ export function AdminCommandCenter({
             {/* Google Maps-Style Unified Left Side Panel + Middle Edge Collapse/Expand Tab Handle */}
             <aside
               id="gis-unified-panel"
+              className="gis-unified-panel"
               aria-label="Township operations side panel"
               style={{
                 position: "absolute",
@@ -1140,7 +1155,7 @@ export function AdminCommandCenter({
                 bottom: "33px",
                 left: 0,
                 zIndex: 5,
-                width: "min(380px, calc(100vw - 88px))",
+                width: "min(380px, calc(100vw - 32px))",
                 display: "flex",
                 flexDirection: "column",
                 background: "color-mix(in srgb, var(--gis-panel) 97%, transparent)",
@@ -1274,6 +1289,7 @@ export function AdminCommandCenter({
 
             {/* Unified Bottom-Right Map Control Panel: Map Layers + TreePine Badges & Status */}
             <section
+              className="gis-map-control-card"
               aria-label="Map layers and TreePine badge legend"
               style={{
                 position: "absolute",
@@ -1281,6 +1297,7 @@ export function AdminCommandCenter({
                 bottom: "42px",
                 zIndex: 5,
                 width: "244px",
+                maxWidth: "calc(100vw - 24px)",
                 border: "1px solid var(--gis-border)",
                 borderRadius: "10px",
                 background:
