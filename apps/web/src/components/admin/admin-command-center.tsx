@@ -1277,23 +1277,23 @@ export function AdminCommandCenter({
               aria-label="Map layers and TreePine badge legend"
               style={{
                 position: "absolute",
-                right: "16px",
-                bottom: "46px",
+                right: "12px",
+                bottom: "42px",
                 zIndex: 5,
-                width: layersOpen ? "308px" : "auto",
-                maxWidth: "calc(100vw - 32px)",
+                width: "244px",
                 border: "1px solid var(--gis-border)",
-                borderRadius: "12px",
+                borderRadius: "10px",
                 background:
-                  "color-mix(in srgb, var(--gis-panel) 96%, transparent)",
-                backdropFilter: "blur(14px)",
-                boxShadow: "0 10px 28px rgba(2, 11, 19, 0.42)",
-                padding: "10px 12px",
+                  "color-mix(in srgb, var(--gis-panel) 95%, transparent)",
+                backdropFilter: "blur(12px)",
+                boxShadow: "0 6px 20px rgba(2, 11, 19, 0.36)",
+                padding: "8px 10px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "10px",
+                gap: "7px",
                 color: "var(--gis-text)",
-                fontSize: "11px",
+                fontSize: "10px",
+                lineHeight: 1.3,
               }}
             >
               {/* Top Control Row: Basemap Quick Toggle + Expandable Layers Toggle */}
@@ -1302,7 +1302,7 @@ export function AdminCommandCenter({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  gap: "10px",
+                  gap: "6px",
                 }}
               >
                 <div
@@ -1312,7 +1312,7 @@ export function AdminCommandCenter({
                     display: "inline-flex",
                     alignItems: "center",
                     padding: "2px",
-                    borderRadius: "8px",
+                    borderRadius: "6px",
                     border: "1px solid var(--gis-border)",
                     background: "var(--gis-base)",
                     gap: "2px",
@@ -1323,9 +1323,9 @@ export function AdminCommandCenter({
                     aria-pressed={basemap === "geographic"}
                     onClick={() => setBasemap("geographic")}
                     style={{
-                      minHeight: "26px",
-                      padding: "0 10px",
-                      borderRadius: "6px",
+                      minHeight: "22px",
+                      padding: "0 7px",
+                      borderRadius: "4px",
                       border: 0,
                       fontSize: "10px",
                       fontWeight: basemap === "geographic" ? 600 : 400,
@@ -1339,16 +1339,16 @@ export function AdminCommandCenter({
                           : "var(--gis-muted)",
                     }}
                   >
-                    Light Map
+                    Light
                   </button>
                   <button
                     type="button"
                     aria-pressed={basemap === "satellite"}
                     onClick={() => setBasemap("satellite")}
                     style={{
-                      minHeight: "26px",
-                      padding: "0 10px",
-                      borderRadius: "6px",
+                      minHeight: "22px",
+                      padding: "0 7px",
+                      borderRadius: "4px",
                       border: 0,
                       fontSize: "10px",
                       fontWeight: basemap === "satellite" ? 600 : 400,
@@ -1373,10 +1373,10 @@ export function AdminCommandCenter({
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "6px",
-                    minHeight: "28px",
-                    padding: "0 10px",
-                    borderRadius: "8px",
+                    gap: "4px",
+                    minHeight: "24px",
+                    padding: "0 8px",
+                    borderRadius: "6px",
                     border: "1px solid var(--gis-border)",
                     background: layersOpen
                       ? "rgba(82, 217, 165, 0.14)"
@@ -1388,10 +1388,10 @@ export function AdminCommandCenter({
                     fontWeight: 500,
                   }}
                 >
-                  <Layers3 size={13} aria-hidden="true" />
-                  <span>Map layers</span>
+                  <Layers3 size={12} aria-hidden="true" />
+                  <span>Layers</span>
                   <ChevronDown
-                    size={12}
+                    size={11}
                     aria-hidden="true"
                     style={{
                       transform: layersOpen ? "rotate(180deg)" : "rotate(0deg)",
@@ -1405,10 +1405,10 @@ export function AdminCommandCenter({
               {layersOpen && (
                 <div
                   style={{
-                    paddingTop: "8px",
+                    paddingTop: "6px",
                     borderTop: "1px solid var(--gis-border)",
                     display: "grid",
-                    gap: "8px",
+                    gap: "6px",
                   }}
                 >
                   <label
@@ -1416,17 +1416,18 @@ export function AdminCommandCenter({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      gap: "10px",
+                      gap: "8px",
                       cursor: "pointer",
                     }}
                   >
-                    <span style={{ color: "var(--gis-text)", fontSize: "11px" }}>
-                      TreePine canopy badges ({treeList?.length ?? 40})
+                    <span style={{ color: "var(--gis-text)", fontSize: "10px" }}>
+                      TreePine badges ({treeList?.length ?? 40})
                     </span>
                     <input
                       type="checkbox"
                       checked={showTrees}
                       onChange={(e) => setShowTrees(e.target.checked)}
+                      style={{ width: "13px", height: "13px", margin: 0 }}
                     />
                   </label>
                   <label
@@ -1434,27 +1435,28 @@ export function AdminCommandCenter({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      gap: "10px",
+                      gap: "8px",
                       cursor: showTrees ? "pointer" : "not-allowed",
                       opacity: showTrees ? 1 : 0.5,
                     }}
                   >
-                    <span style={{ color: "var(--gis-text)", fontSize: "11px" }}>
-                      Health condition colors
+                    <span style={{ color: "var(--gis-text)", fontSize: "10px" }}>
+                      Health status colors
                     </span>
                     <input
                       type="checkbox"
                       checked={showHealth}
                       disabled={!showTrees}
                       onChange={(e) => setShowHealth(e.target.checked)}
+                      style={{ width: "13px", height: "13px", margin: 0 }}
                     />
                   </label>
                   <label
                     style={{
                       display: "grid",
-                      gap: "4px",
+                      gap: "3px",
                       color: "var(--gis-muted)",
-                      fontSize: "10px",
+                      fontSize: "9.5px",
                     }}
                   >
                     <div
@@ -1478,6 +1480,9 @@ export function AdminCommandCenter({
                       onChange={(e) => setOpacity(Number(e.target.value))}
                       style={{
                         width: "100%",
+                        height: "14px",
+                        minHeight: "14px",
+                        margin: 0,
                         accentColor: "var(--gis-accent)",
                       }}
                     />
@@ -1485,34 +1490,24 @@ export function AdminCommandCenter({
                 </div>
               )}
 
-              {/* Merged TreePine Badges & Status Reference */}
+              {/* Merged TreePine Badges & Status Reference (Compact 2x2 Grid) */}
               <div
                 style={{
-                  paddingTop: "8px",
+                  paddingTop: "6px",
                   borderTop: "1px solid var(--gis-border)",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: "6px 12px",
-                  fontSize: "10px",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "4px 8px",
+                  fontSize: "9.5px",
                   color: "var(--gis-muted)",
                 }}
               >
                 <span
                   style={{
-                    color: "var(--gis-text)",
-                    fontWeight: 500,
-                    paddingRight: "8px",
-                    borderRight: "1px solid var(--gis-border)",
-                  }}
-                >
-                  TreePine badges
-                </span>
-                <span
-                  style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "5px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   <i className="gis-health-key gis-health-key--healthy" />
@@ -1523,6 +1518,7 @@ export function AdminCommandCenter({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "5px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   <i className="gis-health-key gis-health-key--attention" />
@@ -1533,6 +1529,7 @@ export function AdminCommandCenter({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "5px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   <i className="gis-health-key gis-health-key--critical">!</i>
@@ -1543,10 +1540,11 @@ export function AdminCommandCenter({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "5px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   <i className="gis-verified-key" />
-                  Arbitrum Verified
+                  Arbitrum Sealed
                 </span>
               </div>
             </section>
