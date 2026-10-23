@@ -253,10 +253,16 @@ export default function Home() {
                     and real-time canopy telemetry in the transparency explorer
                     below or the operations map workspace.
                   </p>
-                  <ButtonLink href="/admin/map" variant="text">
-                    Open the map workspace{" "}
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </ButtonLink>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    <ButtonLink href="#transparency">
+                      View Live Canopy Map{" "}
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </ButtonLink>
+                    <ButtonLink href="/admin/map" variant="text">
+                      Open map workspace{" "}
+                      <ArrowRight size={15} aria-hidden="true" />
+                    </ButtonLink>
+                  </div>
                 </div>
               </div>
             </section>
@@ -312,6 +318,16 @@ export default function Home() {
                 </div>
               </div>
             </section>
+          </div>
+        </div>
+
+        {/* Public DLP Audit & Township Transparency Hub (Live Canopy Map) */}
+        <div
+          id="transparency"
+          className="px-[var(--page-gutter)] py-16 bg-[var(--background)] border-t border-[var(--border)]"
+        >
+          <div className="max-w-6xl mx-auto">
+            <TownshipTransparencyExplorer />
           </div>
         </div>
 
@@ -375,16 +391,6 @@ export default function Home() {
             ))}
           </ol>
         </section>
-
-        {/* Public DLP Audit & Township Transparency Hub */}
-        <div
-          id="transparency"
-          className="px-[var(--page-gutter)] py-16 bg-[var(--background)] border-t border-[var(--border)]"
-        >
-          <div className="max-w-6xl mx-auto">
-            <TownshipTransparencyExplorer />
-          </div>
-        </div>
 
         <section
           className="platform-section"
