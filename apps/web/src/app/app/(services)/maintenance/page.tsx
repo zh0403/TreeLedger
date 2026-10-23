@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchMaintenanceRecords } from '@/lib/api';
 import { MaintenanceActionType, MaintenanceRecord } from '@/lib/types';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 export default function MaintenanceStreamPage() {
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
@@ -39,10 +40,15 @@ export default function MaintenanceStreamPage() {
 
   useEffect(() => {
     let active = true;
-    void fetchMaintenanceRecords().then(data => {
-      if (active) { setRecords(data); setLoading(false); }
+    void fetchMaintenanceRecords().then((data) => {
+      if (active) {
+        setRecords(data);
+        setLoading(false);
+      }
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredRecords = useMemo(() => {
@@ -73,65 +79,78 @@ export default function MaintenanceStreamPage() {
     }
   };
 
-  const formatActionBadge = (action: MaintenanceActionType) => {
+  const formatActionBadge = (
+    action: MaintenanceActionType
+  ): {
+    label: string;
+    tone: 'healthy' | 'verified' | 'warning';
+  } => {
     switch (action) {
       case 'CANOPY_PRUNING':
         return {
           label: 'Canopy Pruning',
-          className:
-            'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+          tone: 'healthy',
         };
       case 'DEEP_ROOT_WATERING':
         return {
           label: 'Deep-Root Watering',
-          className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
+          tone: 'verified',
         };
       case 'REPLACED_SAPLING':
         return {
           label: 'Replaced Sapling',
-          className: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+          tone: 'warning',
         };
     }
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-5 font-sans text-[var(--foreground)]">
       {/* Header Card */}
-      <section className="rounded-2xl bg-gradient-to-br from-cyan-950/50 via-slate-900 to-slate-900 border border-cyan-500/30 p-4 shadow-lg space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
+      <section
+        className="surface-panel p-4 space-y-2"
+        style={{
+          background:
+            'radial-gradient(ellipse at top right, color-mix(in srgb, var(--proof-400) 14%, transparent), transparent 65%), var(--surface)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-1.5 text-[var(--proof-400)] text-xs font-medium uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4" />
             <span>On-Chain Audited Maintenance Stream</span>
           </div>
-          <span className="rounded-md bg-slate-950/90 border border-cyan-500/30 px-2 py-0.5 text-[10px] font-mono text-cyan-300">
+          <span className="rounded-[var(--radius-pill)] bg-[var(--background)] border border-[var(--proof-400)]/40 px-2.5 py-0.5 text-[11px] font-mono text-[var(--proof-400)]">
             Arbitrum Sepolia
           </span>
         </div>
-        <p className="text-xs text-slate-300 leading-relaxed">
+        <p className="text-xs text-[var(--muted)] leading-relaxed">
           Every contractor work order is verified via before/after computer
           vision and anchored to{' '}
-          <span className="font-mono text-cyan-300">TreeLedgerAudit.sol</span>{' '}
+          <span className="font-mono text-[var(--proof-400)]">
+            TreeLedgerAudit.sol
+          </span>{' '}
           with a cryptographic <span className="font-mono">keccak256</span>{' '}
           receipt.
         </p>
       </section>
 
       {/* Search & Action Type Filters */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[var(--muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Tree ID, Contractor, or Arbitrum 0x hash..."
-            className="w-full rounded-xl bg-slate-900 border border-slate-800 pl-9 pr-9 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/60"
+            className="w-full min-h-[44px] rounded-[var(--radius-control)] bg-[var(--surface)] border border-[var(--control-border)] pl-9 pr-9 py-2.5 text-xs text-[var(--foreground)] placeholder:text-[var(--muted)]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)]"
+              aria-label="Clear search"
             >
               <X className="w-4 h-4" />
             </button>
@@ -152,10 +171,11 @@ export default function MaintenanceStreamPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActionFilter(tab.key)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                aria-pressed={actionFilter === tab.key}
+                className={`min-h-[38px] shrink-0 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-medium border transition-colors cursor-pointer ${
                   actionFilter === tab.key
-                    ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    ? 'bg-[var(--proof-400)] border-[var(--proof-400)] text-[var(--forest-950)]'
+                    : 'bg-[var(--surface)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]'
                 }`}
               >
                 {tab.label}
@@ -166,9 +186,9 @@ export default function MaintenanceStreamPage() {
           <button
             type="button"
             onClick={loadRecords}
-            className="shrink-0 inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200"
+            className="min-h-[38px] px-2.5 rounded-[var(--radius-control)] shrink-0 inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] cursor-pointer"
           >
-            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Sync
           </button>
         </div>
@@ -180,27 +200,27 @@ export default function MaintenanceStreamPage() {
           {[1, 2].map((n) => (
             <div
               key={n}
-              className="rounded-2xl bg-slate-900 border border-slate-800 p-4 animate-pulse space-y-3"
+              className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] p-4 animate-pulse space-y-3"
             >
               <div className="flex justify-between">
-                <div className="h-4 w-24 bg-slate-800 rounded" />
-                <div className="h-4 w-32 bg-slate-800 rounded" />
+                <div className="h-4 w-24 bg-[var(--surface-raised)] rounded" />
+                <div className="h-4 w-32 bg-[var(--surface-raised)] rounded" />
               </div>
-              <div className="h-44 w-full bg-slate-800 rounded-xl" />
-              <div className="h-12 w-full bg-slate-800 rounded-xl" />
+              <div className="h-44 w-full bg-[var(--surface-raised)] rounded-[var(--radius-control)]" />
+              <div className="h-12 w-full bg-[var(--surface-raised)] rounded-[var(--radius-control)]" />
             </div>
           ))}
         </div>
       ) : filteredRecords.length === 0 ? (
-        <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-8 text-center space-y-3">
-          <div className="w-10 h-10 rounded-full bg-slate-800/80 flex items-center justify-center mx-auto text-slate-400">
+        <div className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] p-8 text-center space-y-3">
+          <div className="w-11 h-11 rounded-full bg-[var(--surface-raised)] flex items-center justify-center mx-auto text-[var(--proof-400)]">
             <Filter className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-slate-200">
+            <p className="text-sm font-medium text-[var(--foreground)]">
               No Audited Maintenance Logs Found
             </p>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+            <p className="text-xs text-[var(--muted)] max-w-xs mx-auto leading-relaxed">
               No verified proof-of-work records match your current filter.
             </p>
           </div>
@@ -210,7 +230,7 @@ export default function MaintenanceStreamPage() {
               setActionFilter('ALL');
               setSearchQuery('');
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 px-3.5 py-2 text-xs font-semibold text-cyan-300"
+            className="button button--secondary"
           >
             Reset Audit Filters
           </button>
@@ -228,53 +248,55 @@ export default function MaintenanceStreamPage() {
             return (
               <article
                 key={rec.id}
-                className="rounded-2xl bg-slate-900/95 border border-slate-800/90 p-4 space-y-3.5 shadow-md"
+                className="surface-panel p-4 space-y-4 transition-colors hover:border-[var(--control-border)]"
               >
-                {/* Header */}
-                <div className="flex items-start justify-between gap-2">
+                {/* Archival Record Header */}
+                <div className="flex items-start justify-between gap-2 border-b border-[var(--border)] pb-3">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-800 text-emerald-400 border border-slate-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-medium px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--background)] text-[var(--accent)] border border-[var(--border)]">
                         {rec.tree_id}
                       </span>
-                      <span
-                        className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${actionBadge.className}`}
-                      >
+                      <StatusBadge tone={actionBadge.tone}>
                         {actionBadge.label}
-                      </span>
+                      </StatusBadge>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-                      <Wrench className="w-3 h-3 text-slate-500" />
+                    <p className="text-xs text-[var(--muted)] mt-1.5 flex items-center gap-1.5">
+                      <Wrench className="w-3 h-3 text-[var(--accent)]" />
                       <span>{rec.contractor_id}</span>
                     </p>
                   </div>
 
                   {rec.ai_verification_passed && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-                      <Sparkles className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--background)] border border-[var(--proof-400)]/40 px-2.5 py-1 text-xs font-medium text-[var(--proof-400)]">
+                      <Sparkles className="w-3.5 h-3.5" />
                       AI PoW Verified
                     </span>
                   )}
                 </div>
 
-                {/* View Mode Switcher for Before/After Comparison */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                    Before / After Visual Proof-of-Work
+                {/* View Mode Switcher for Archival Before/After Comparison */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-[var(--muted)] flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-[var(--proof-400)]" />
+                    Archival Before / After Proof Plate
                   </span>
-                  <div className="inline-flex rounded-lg bg-slate-950 border border-slate-800 p-0.5 text-[10px] font-semibold">
+                  <div className="inline-flex rounded-[var(--radius-pill)] bg-[var(--background)] border border-[var(--border)] p-1 text-xs font-medium">
                     {(['SPLIT', 'BEFORE', 'AFTER'] as const).map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() =>
-                          setActiveSlideMap((prev) => ({ ...prev, [rec.id]: m }))
+                          setActiveSlideMap((prev) => ({
+                            ...prev,
+                            [rec.id]: m,
+                          }))
                         }
-                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                        aria-pressed={viewMode === m}
+                        className={`px-2.5 py-1 rounded-[var(--radius-pill)] transition-colors cursor-pointer ${
                           viewMode === m
-                            ? 'bg-slate-800 text-white'
-                            : 'text-slate-400 hover:text-slate-200'
+                            ? 'bg-[var(--surface-raised)] text-[var(--foreground)]'
+                            : 'text-[var(--muted)] hover:text-[var(--foreground)]'
                         }`}
                       >
                         {m === 'SPLIT'
@@ -287,34 +309,44 @@ export default function MaintenanceStreamPage() {
                   </div>
                 </div>
 
-                {/* Before / After Photo Comparison Container */}
+                {/* Clean Archival Before / After Photo Comparison Plates */}
                 {viewMode === 'SPLIT' ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="relative h-36 rounded-xl overflow-hidden border border-rose-500/30 bg-slate-950">
-                      <img
-                        src={rec.before_photo_url}
-                        alt={`Before maintenance on ${rec.tree_id}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute top-2 left-2 rounded-md bg-slate-950/90 border border-rose-500/40 px-2 py-0.5 text-[10px] font-bold text-rose-300">
-                        BEFORE
-                      </span>
-                    </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <figure className="m-0 rounded-[var(--radius-control)] overflow-hidden border border-[var(--border)] bg-[var(--background)] flex flex-col">
+                      <div className="relative h-36">
+                        <img
+                          src={rec.before_photo_url}
+                          alt={`Before maintenance on ${rec.tree_id}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute top-2 left-2 rounded-[var(--radius-pill)] bg-[var(--background)]/90 border border-[var(--border)] px-2.5 py-0.5 text-[10px] font-mono font-medium text-[var(--status-critical-text)]">
+                          BEFORE
+                        </span>
+                      </div>
+                      <figcaption className="px-2.5 py-1.5 text-[11px] font-mono text-[var(--muted)] border-t border-[var(--border)]">
+                        Baseline Incident Frame
+                      </figcaption>
+                    </figure>
 
-                    <div className="relative h-36 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-950">
-                      <img
-                        src={rec.after_photo_url}
-                        alt={`After maintenance on ${rec.tree_id}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute top-2 left-2 rounded-md bg-slate-950/90 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-bold text-emerald-300 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        AFTER
-                      </span>
-                    </div>
+                    <figure className="m-0 rounded-[var(--radius-control)] overflow-hidden border border-[var(--proof-400)]/45 bg-[var(--background)] flex flex-col">
+                      <div className="relative h-36">
+                        <img
+                          src={rec.after_photo_url}
+                          alt={`After maintenance on ${rec.tree_id}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute top-2 left-2 rounded-[var(--radius-pill)] bg-[var(--background)]/90 border border-[var(--proof-400)]/50 px-2.5 py-0.5 text-[10px] font-mono font-medium text-[var(--proof-400)] flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          AFTER • SEALED
+                        </span>
+                      </div>
+                      <figcaption className="px-2.5 py-1.5 text-[11px] font-mono text-[var(--proof-400)] border-t border-[var(--border)]">
+                        Verified Completion Plate
+                      </figcaption>
+                    </figure>
                   </div>
                 ) : (
-                  <div className="relative h-48 rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+                  <figure className="m-0 relative h-52 rounded-[var(--radius-control)] overflow-hidden border border-[var(--control-border)] bg-[var(--background)]">
                     <img
                       src={
                         viewMode === 'BEFORE'
@@ -325,30 +357,42 @@ export default function MaintenanceStreamPage() {
                       className="w-full h-full object-cover"
                     />
                     <span
-                      className={`absolute top-2.5 left-2.5 rounded-md bg-slate-950/90 px-2.5 py-1 text-[10px] font-bold border ${
+                      className="absolute top-2.5 left-2.5 rounded-[var(--radius-pill)] bg-[var(--background)]/90 px-3 py-1 text-xs font-mono font-medium border"
+                      style={
                         viewMode === 'BEFORE'
-                          ? 'border-rose-500/40 text-rose-300'
-                          : 'border-emerald-500/40 text-emerald-300'
-                      }`}
+                          ? {
+                              borderColor: 'var(--status-critical)',
+                              color: 'var(--status-critical-text)',
+                            }
+                          : {
+                              borderColor: 'var(--proof-400)',
+                              color: 'var(--proof-400)',
+                            }
+                      }
                     >
-                      {viewMode} MAINTENANCE FRAME
+                      {viewMode} ARCHIVAL PLATE
                     </span>
-                  </div>
+                  </figure>
                 )}
 
                 {/* Arborist Notes */}
-                <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/60 rounded-xl p-3 border border-slate-800/80">
+                <p className="text-xs text-[var(--foreground)] leading-relaxed bg-[var(--background)] rounded-[var(--radius-control)] p-3 border border-[var(--border)]">
                   {rec.notes}
                 </p>
 
-                {/* Arbitrum Transaction Explorer Badge */}
-                <div className="rounded-xl bg-slate-950 border border-cyan-500/30 p-3 space-y-2">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                      Arbitrum L2 Audit Receipt
+                {/* Cryptographic Verification Seal (--proof-400) */}
+                <div
+                  className="rounded-[var(--radius-control)] bg-[var(--background)] border p-3.5 space-y-2.5"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--proof-400) 42%, var(--border))',
+                  }}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-[var(--proof-400)] flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-[var(--proof-400)]" />
+                      Cryptographic Verification Seal • Arbitrum L2
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-xs font-mono text-[var(--muted)]">
                       {new Date(rec.completed_at).toLocaleString('en-MY', {
                         day: 'numeric',
                         month: 'short',
@@ -361,17 +405,17 @@ export default function MaintenanceStreamPage() {
 
                   <div className="flex items-center justify-between gap-2 pt-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <code className="font-mono text-xs text-slate-200 bg-slate-900 px-2 py-1 rounded border border-slate-800 truncate">
+                      <code className="font-mono text-xs text-[var(--foreground)] bg-[var(--surface)] px-2.5 py-1 rounded-[var(--radius-control)] border border-[var(--border)] truncate">
                         {shortTx}
                       </code>
                       <button
                         type="button"
                         onClick={() => handleCopyTx(rec.arbitrum_tx_hash)}
-                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+                        className="w-9 h-9 grid place-items-center rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
                         title="Copy full transaction hash"
                       >
                         {copiedTx === rec.arbitrum_tx_hash ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-[var(--accent)]" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -382,7 +426,7 @@ export default function MaintenanceStreamPage() {
                       href={`https://sepolia.arbiscan.io/tx/${rec.arbitrum_tx_hash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 px-2.5 py-1 text-[11px] font-semibold text-cyan-300 transition-colors"
+                      className="min-h-[36px] shrink-0 inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--surface-raised)] hover:bg-[var(--surface)] border border-[var(--proof-400)]/45 px-3 py-1 text-xs font-medium text-[var(--proof-400)] transition-colors"
                     >
                       <span>Arbiscan</span>
                       <ExternalLink className="w-3 h-3" />

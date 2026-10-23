@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import Link from 'next/link';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
@@ -27,6 +26,9 @@ import {
 } from 'lucide-react';
 import { HandoverStatus, Tree } from '@/lib/types';
 import { fetchTrees } from '@/lib/api';
+import { Brand } from '@/components/ui/brand';
+import { ButtonLink } from '@/components/ui/button-link';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 // City of Elmina Masterplan Center Coordinates [lng, lat]
 export const ELMINA_CENTER_LNG = 101.5034;
@@ -384,54 +386,64 @@ function mergeAndNormalizeTrees(fetched: Tree[]): Tree[] {
   return Array.from(byId.values());
 }
 
-function getHealthMeta(score: number) {
+function getHealthMeta(score: number): {
+  label: string;
+  tone: 'healthy' | 'warning' | 'critical';
+  hex: string;
+  ringHex: string;
+  textColorVar: string;
+} {
   if (score >= 80) {
     return {
       label: 'Healthy Canopy',
-      hex: '#10b981',
-      ringHex: 'rgba(16, 185, 129, 0.42)',
-      badgeClass: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
-      textClass: 'text-emerald-400',
+      tone: 'healthy',
+      hex: '#52d9a5',
+      ringHex: 'rgba(82, 217, 165, 0.38)',
+      textColorVar: 'var(--status-healthy)',
     };
   }
   if (score >= 50) {
     return {
       label: 'Moderate Stress',
-      hex: '#f59e0b',
-      ringHex: 'rgba(245, 158, 11, 0.42)',
-      badgeClass: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-      textClass: 'text-amber-400',
+      tone: 'warning',
+      hex: '#e5ae50',
+      ringHex: 'rgba(229, 174, 80, 0.38)',
+      textColorVar: 'var(--status-warning)',
     };
   }
   return {
     label: 'Critical Action',
-    hex: '#f43f5e',
-    ringHex: 'rgba(244, 63, 94, 0.48)',
-    badgeClass: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
-    textClass: 'text-rose-400',
+    tone: 'critical',
+    hex: '#e36b67',
+    ringHex: 'rgba(227, 107, 103, 0.44)',
+    textColorVar: 'var(--status-critical-text)',
   };
 }
 
-function getDlpStatusMeta(status: HandoverStatus) {
+function getDlpStatusMeta(status: HandoverStatus): {
+  label: string;
+  warrantyNote: string;
+  tone: 'verified' | 'warning' | 'healthy';
+} {
   switch (status) {
     case 'PRE_HANDOVER_PLANTED':
       return {
         label: 'Pre-Handover Audit',
         warrantyNote: 'Pending VP Verification',
-        badgeClass: 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30',
+        tone: 'verified',
       };
     case 'DLP_ACTIVE':
       return {
         label: 'DLP Active (24-Mo Warranty)',
         warrantyNote: '14-Day Replacement SLA Active',
-        badgeClass: 'bg-purple-500/15 text-purple-300 border border-purple-500/30',
+        tone: 'warning',
       };
     case 'COMMISSIONED':
     default:
       return {
         label: 'Commissioned Canopy',
         warrantyNote: 'Township Stewardship Active',
-        badgeClass: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
+        tone: 'healthy',
       };
   }
 }
@@ -493,24 +505,28 @@ const SLA_TERMS = [
   {
     title: '2-Year DLP Sapling Replacement Warranty',
     badge: '14-Day SLA',
+    tone: 'healthy' as const,
     description:
       'Any tree displaying severe crown desiccation (>30%), root heave failure, or terminal disease during the 24-month Defect Liability Period must be replaced by the appointed landscaping contractor within 14 calendar days at zero cost to homebuyers.',
   },
   {
     title: '85% Minimum Canopy Survival Index',
     badge: 'Enforceable Penalty',
+    tone: 'warning' as const,
     description:
       'Contractors are contractually bound to maintain an overall precinct health benchmark of 85% or higher. Falling below this threshold triggers an automated 10% monthly maintenance fee deduction calculated by the TreeLedger governance engine.',
   },
   {
     title: '24-Hour Emergency Storm Hazard Response',
     badge: 'Critical Safety',
+    tone: 'critical' as const,
     description:
       'Reports classified by Google Gemini AI Vision as CRITICAL_24H (fallen limbs, branch overhang over roads) require contractor crew dispatch and site clearance within 24 hours of citizen submission.',
   },
   {
     title: 'Immutable Proof-of-Work Verification',
     badge: 'Arbitrum Sepolia',
+    tone: 'verified' as const,
     description:
       'Zero contractor invoices are cleared without verified before-and-after photographic evidence. Every completed task generates a cryptographic keccak256 proof hash recorded on Arbitrum Sepolia.',
   },
@@ -530,7 +546,6 @@ export function TownshipTransparencyExplorer() {
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || '';
   const [useFallbackMap, setUseFallbackMap] = useState<boolean>(false);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-  // Two view options: 'default' (Default Street & Park View) and 'satellite' (Real Satellite Hybrid Imagery)
   const [mapStyleMode, setMapStyleMode] = useState<MapViewMode>('default');
   const [fallbackZoom, setFallbackZoom] = useState<number>(1);
   const [fallbackCenter, setFallbackCenter] = useState<{ lng: number; lat: number }>({
@@ -593,10 +608,9 @@ export function TownshipTransparencyExplorer() {
     }
 
     let isCancelled = false;
+    const markers = markersRef.current;
 
     try {
-      // Allow Mapbox GL v3 WebGL engine to render open raster tile sources (CARTO / Esri World Imagery)
-      // without revoking the WebGL canvas when NEXT_PUBLIC_MAPBOX_TOKEN is absent.
       const mapProto = mapboxgl.Map.prototype as unknown as {
         _authenticate?: () => void;
         _revokeAuth?: () => void;
@@ -639,7 +653,6 @@ export function TownshipTransparencyExplorer() {
       });
 
       map.on('error', () => {
-        // If a Mapbox cloud style fails due to an invalid token, switch seamlessly to the free real GIS tiles
         if (!isCancelled && mapInstanceRef.current && mapboxToken) {
           try {
             mapInstanceRef.current.setStyle(FREE_REAL_MAP_STYLES[mapStyleMode]);
@@ -652,8 +665,8 @@ export function TownshipTransparencyExplorer() {
 
       return () => {
         isCancelled = true;
-        markersRef.current.forEach((m) => m.remove());
-        markersRef.current.clear();
+        markers.forEach((m) => m.remove());
+        markers.clear();
         map.remove();
         mapInstanceRef.current = null;
         setMapLoaded(false);
@@ -713,8 +726,8 @@ export function TownshipTransparencyExplorer() {
       dot.style.borderRadius = '9999px';
       dot.style.backgroundColor = health.hex;
       dot.style.border = isSelected
-        ? '3px solid #ffffff'
-        : '2.5px solid #020617';
+        ? '3px solid #f5f7f2'
+        : '2.5px solid #0b1d18';
       dot.style.boxShadow = isSelected
         ? `0 0 0 6px ${health.ringHex}, 0 6px 16px rgba(0,0,0,0.75)`
         : `0 0 0 4px ${health.ringHex}, 0 3px 8px rgba(0,0,0,0.5)`;
@@ -723,14 +736,14 @@ export function TownshipTransparencyExplorer() {
       const label = document.createElement('span');
       label.textContent = tree.id;
       label.style.marginTop = '3px';
-      label.style.padding = '1px 5px';
-      label.style.borderRadius = '4px';
+      label.style.padding = '1px 6px';
+      label.style.borderRadius = '999px';
       label.style.fontSize = '9px';
-      label.style.fontFamily = 'monospace';
+      label.style.fontFamily = 'var(--font-geist-mono), monospace';
       label.style.fontWeight = '700';
-      label.style.backgroundColor = isSelected ? '#10b981' : 'rgba(2, 6, 23, 0.88)';
-      label.style.color = isSelected ? '#020617' : '#f8fafc';
-      label.style.border = '1px solid rgba(51, 65, 85, 0.8)';
+      label.style.backgroundColor = isSelected ? '#52d9a5' : 'rgba(11, 29, 24, 0.92)';
+      label.style.color = isSelected ? '#0b1d18' : '#f5f7f2';
+      label.style.border = '1px solid rgba(201, 237, 218, 0.22)';
       label.style.whiteSpace = 'nowrap';
 
       wrapper.appendChild(dot);
@@ -824,149 +837,171 @@ export function TownshipTransparencyExplorer() {
   }, [filteredTrees, selectedPrecinct]);
 
   return (
-    <section className="space-y-8 rounded-3xl bg-slate-900/60 border border-slate-800 p-6 sm:p-8 backdrop-blur-sm relative overflow-hidden">
+    <section
+      className="surface-panel space-y-8 p-6 sm:p-8 relative overflow-hidden"
+      style={{
+        background:
+          'radial-gradient(ellipse at top right, var(--ambient), transparent 62%), var(--surface)',
+      }}
+    >
       {/* Section Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-800/80 pb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold mb-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Public Defect Liability Period (DLP) Transparency</span>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[var(--border)] pb-6">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <Brand href="#transparency" subtitle="Public DLP & Canopy Ledger" />
+            <StatusBadge tone="healthy">
+              Public Defect Liability Period (DLP) Transparency
+            </StatusBadge>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Township Canopy & Quota Delivery Audit
+          <h2 className="text-2xl sm:text-3xl font-medium text-[var(--foreground)] tracking-tight">
+            Township Canopy &amp; Quota Delivery Audit
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
+          <p className="text-xs sm:text-sm text-[var(--muted)] max-w-2xl leading-relaxed">
             Publicly auditable delivery verification for Sime Darby Property&apos;s City of Elmina.
             Compare promised developer quotas, inspect living trees, and verify contractor maintenance warranties.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 font-semibold transition-colors px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30"
-          >
+          <ButtonLink href="/admin" variant="secondary">
             <span>Open Operations Map</span>
             <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          </ButtonLink>
         </div>
       </div>
 
       {/* (b) Categorized by Project Tabs */}
       <div className="space-y-3">
-        <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <Layers className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
+          <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
           <span>Select Housing Project / Masterplan Phase:</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {PRECINCTS.map((precinct) => (
-            <button
-              key={precinct}
-              type="button"
-              onClick={() => {
-                setSelectedPrecinct(precinct);
-                const center = PRECINCT_CENTERS[precinct] || PRECINCT_CENTERS['All Projects'];
-                flyToCoordinates(center.lng, center.lat, center.zoom);
-                const matching =
-                  precinct === 'All Projects'
-                    ? trees
-                    : trees.filter((t) => t.precinct === precinct);
-                setSelectedTree(matching[0] || null);
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                selectedPrecinct === precinct
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'bg-slate-800/80 hover:bg-slate-850 text-slate-300 border border-slate-700/60 hover:text-white'
-              }`}
-            >
-              {precinct}
-            </button>
-          ))}
+          {PRECINCTS.map((precinct) => {
+            const isActive = selectedPrecinct === precinct;
+            return (
+              <button
+                key={precinct}
+                type="button"
+                onClick={() => {
+                  setSelectedPrecinct(precinct);
+                  const center = PRECINCT_CENTERS[precinct] || PRECINCT_CENTERS['All Projects'];
+                  flyToCoordinates(center.lng, center.lat, center.zoom);
+                  const matching =
+                    precinct === 'All Projects'
+                      ? trees
+                      : trees.filter((t) => t.precinct === precinct);
+                  setSelectedTree(matching[0] || null);
+                }}
+                aria-pressed={isActive}
+                className="min-h-[44px] px-4 py-2 rounded-[var(--radius-pill)] text-xs font-medium transition-all cursor-pointer border"
+                style={
+                  isActive
+                    ? {
+                        background: 'var(--accent)',
+                        color: 'var(--accent-foreground)',
+                        borderColor: 'var(--accent)',
+                      }
+                    : {
+                        background: 'var(--surface-raised)',
+                        color: 'var(--foreground)',
+                        borderColor: 'var(--border)',
+                      }
+                }
+              >
+                {precinct}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Quota Progress & Project Summary Banner */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Quota Delivery Card */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="lg:col-span-2 p-5 rounded-[var(--radius-panel)] bg-[var(--background)] border border-[var(--border)] space-y-4">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-xs text-slate-400 font-mono">
+              <div className="text-xs text-[var(--muted)] font-mono">
                 {selectedPrecinct === 'All Projects'
                   ? 'City of Elmina Masterplan Canopy Delivery'
                   : PRECINCT_QUOTAS[selectedPrecinct]?.phase || 'Project Phase'}
               </div>
-              <div className="text-base font-bold text-white mt-0.5">
+              <div className="text-base font-medium text-[var(--foreground)] mt-0.5">
                 {selectedPrecinct}
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono">
+            <span className="px-3 py-1 rounded-[var(--radius-pill)] text-xs font-mono font-medium bg-[var(--surface-raised)] text-[var(--accent-soft)] border border-[var(--border)]">
               {stats.fulfillmentPercent}% Fulfilled
             </span>
           </div>
 
           {/* Progress Bar */}
           <div className="space-y-1.5">
-            <div className="flex justify-between text-xs text-slate-300">
+            <div className="flex justify-between text-xs text-[var(--foreground)]">
               <span>Verified Planted: {stats.totalTrees} trees</span>
-              <span className="text-slate-400 font-mono">
+              <span className="text-[var(--muted)] font-mono">
                 Promised Target: {stats.targetQuota} trees
               </span>
             </div>
-            <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden p-0.5 border border-slate-700">
+            <div className="w-full h-3 rounded-[var(--radius-pill)] bg-[var(--surface)] overflow-hidden p-0.5 border border-[var(--border)]">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 transition-all duration-500"
-                style={{ width: `${stats.fulfillmentPercent}%` }}
+                className="h-full rounded-[var(--radius-pill)] transition-all duration-500"
+                style={{
+                  width: `${stats.fulfillmentPercent}%`,
+                  background:
+                    'linear-gradient(90deg, var(--mint-400), var(--canopy-200), var(--proof-400))',
+                }}
               />
             </div>
           </div>
 
           {/* Metrics breakdown */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80 text-center">
-            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-base sm:text-lg font-bold text-emerald-400 font-mono">
+          <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-[var(--border)] text-center">
+            <div className="p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] border border-[var(--border)]">
+              <div className="text-base sm:text-lg font-semibold text-[var(--accent)] font-mono">
                 {stats.avgHealth}%
               </div>
-              <div className="text-[10px] text-slate-400">Canopy Health Index</div>
+              <div className="text-[11px] text-[var(--muted)]">Canopy Health Index</div>
             </div>
 
-            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-base sm:text-lg font-bold text-teal-300 font-mono">
+            <div className="p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] border border-[var(--border)]">
+              <div className="text-base sm:text-lg font-semibold text-[var(--accent-soft)] font-mono">
                 {stats.totalCo2} kg/yr
               </div>
-              <div className="text-[10px] text-slate-400">Annual CO₂ Baseline</div>
+              <div className="text-[11px] text-[var(--muted)]">Annual CO₂ Baseline</div>
             </div>
 
-            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-base sm:text-lg font-bold text-cyan-400 font-mono">
+            <div className="p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] border border-[var(--border)]">
+              <div className="text-base sm:text-lg font-semibold text-[var(--verification)] font-mono">
                 PostGIS
               </div>
-              <div className="text-[10px] text-slate-400">GPS Verified Assets</div>
+              <div className="text-[11px] text-[var(--muted)]">GPS Verified Assets</div>
             </div>
           </div>
         </div>
 
         {/* Contractor Responsibility Card */}
-        <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3 flex flex-col justify-between">
+        <div className="p-5 rounded-[var(--radius-panel)] bg-[var(--background)] border border-[var(--border)] space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
-            <div className="text-xs text-slate-400 font-mono flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-amber-400" />
+            <div className="text-xs text-[var(--muted)] font-mono flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-[var(--status-warning)]" />
               <span>Assigned Landscape Contractor</span>
             </div>
-            <div className="text-sm font-bold text-white">
+            <div className="text-sm font-medium text-[var(--foreground)]">
               {selectedPrecinct === 'All Projects'
                 ? 'Consortium of Appointed Arborists'
                 : PRECINCT_QUOTAS[selectedPrecinct]?.contractor || 'Elmina GreenWorks'}
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-[var(--muted)] leading-relaxed">
               Subject to mandatory 2-Year Defect Liability Period maintenance contracts,
               monthly health index audits, and Arbitrum Sepolia proof-of-work sealing.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-400">Status:</span>
-            <span className="text-emerald-400 font-semibold flex items-center gap-1">
+          <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs">
+            <span className="text-[var(--muted)]">Status:</span>
+            <span className="text-[var(--accent)] font-medium flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Contract Active
             </span>
@@ -977,33 +1012,33 @@ export function TownshipTransparencyExplorer() {
       {/* (a) Real Interactive GIS Canopy Map (City of Elmina) with Default & Satellite Views */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" />
             <span>Interactive Tree Canopy Map (City of Elmina):</span>
           </div>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-[var(--muted)]">
             Switch between Default &amp; Satellite view • Click any tree marker to flyTo and inspect
           </span>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden relative shadow-2xl">
+        <div className="rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--background)] overflow-hidden relative shadow-[var(--shadow-panel)]">
           {/* GIS Map Viewport (height ~460px) */}
-          <div className="h-[460px] w-full relative bg-slate-950 overflow-hidden select-none">
+          <div className="h-[460px] w-full relative bg-[var(--background)] overflow-hidden select-none">
             {/* Top-Left Geospatial HUD & Default / Satellite View Toggle */}
             <div className="absolute top-3.5 left-3.5 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
-              <div className="bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-lg">
+              <div className="bg-[var(--surface)]/95 backdrop-blur-md border border-[var(--border)] rounded-[var(--radius-control)] px-3.5 py-2 flex items-center gap-2.5 shadow-[var(--shadow-panel)]">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--accent)]" />
                 </span>
                 <div>
-                  <div className="text-[11px] font-bold text-white tracking-wide flex items-center gap-1.5">
+                  <div className="text-xs font-medium text-[var(--foreground)] tracking-wide flex items-center gap-1.5">
                     <span>CITY OF ELMINA GIS</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 text-emerald-400 border border-slate-800">
+                    <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--accent)] border border-[var(--border)]">
                       [3.1942° N, 101.5034° E]
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
+                  <div className="text-[11px] text-[var(--muted)] font-mono">
                     {filteredTrees.length} Active Canopy Markers • {selectedPrecinct}
                   </div>
                 </div>
@@ -1011,18 +1046,25 @@ export function TownshipTransparencyExplorer() {
 
               {/* Default vs. Satellite View Toggle Control */}
               <div
-                className="bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-1 flex items-center gap-1 shadow-lg"
+                className="bg-[var(--surface)]/95 backdrop-blur-md border border-[var(--border)] rounded-[var(--radius-pill)] p-1 flex items-center gap-1 shadow-[var(--shadow-panel)]"
                 role="group"
                 aria-label="Map view mode toggle"
               >
                 <button
                   type="button"
                   onClick={() => handleToggleMapStyle('default')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  aria-pressed={mapStyleMode === 'default'}
+                  className="min-h-[36px] px-3 py-1 rounded-[var(--radius-pill)] text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                  style={
                     mapStyleMode === 'default'
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
+                      ? {
+                          background: 'var(--accent)',
+                          color: 'var(--accent-foreground)',
+                        }
+                      : {
+                          color: 'var(--muted)',
+                        }
+                  }
                   title="Default Map View (Street & Park GIS)"
                 >
                   <MapIcon className="w-3.5 h-3.5" />
@@ -1031,11 +1073,18 @@ export function TownshipTransparencyExplorer() {
                 <button
                   type="button"
                   onClick={() => handleToggleMapStyle('satellite')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  aria-pressed={mapStyleMode === 'satellite'}
+                  className="min-h-[36px] px-3 py-1 rounded-[var(--radius-pill)] text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                  style={
                     mapStyleMode === 'satellite'
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
+                      ? {
+                          background: 'var(--accent)',
+                          color: 'var(--accent-foreground)',
+                        }
+                      : {
+                          color: 'var(--muted)',
+                        }
+                  }
                   title="Satellite Map View (High-Res Aerial Imagery)"
                 >
                   <Globe className="w-3.5 h-3.5" />
@@ -1049,7 +1098,7 @@ export function TownshipTransparencyExplorer() {
               <button
                 type="button"
                 onClick={() => handleZoom(1)}
-                className="p-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-lg transition cursor-pointer"
+                className="w-11 h-11 grid place-items-center rounded-[var(--radius-control)] bg-[var(--surface)]/95 hover:bg-[var(--surface-raised)] text-[var(--foreground)] border border-[var(--border)] shadow-[var(--shadow-panel)] transition cursor-pointer"
                 title="Zoom In (+)"
                 aria-label="Zoom In"
               >
@@ -1058,7 +1107,7 @@ export function TownshipTransparencyExplorer() {
               <button
                 type="button"
                 onClick={() => handleZoom(-1)}
-                className="p-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-800 shadow-lg transition cursor-pointer"
+                className="w-11 h-11 grid place-items-center rounded-[var(--radius-control)] bg-[var(--surface)]/95 hover:bg-[var(--surface-raised)] text-[var(--foreground)] border border-[var(--border)] shadow-[var(--shadow-panel)] transition cursor-pointer"
                 title="Zoom Out (-)"
                 aria-label="Zoom Out"
               >
@@ -1067,7 +1116,7 @@ export function TownshipTransparencyExplorer() {
               <button
                 type="button"
                 onClick={handleResetCenter}
-                className="p-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 text-emerald-400 border border-slate-800 shadow-lg transition cursor-pointer"
+                className="w-11 h-11 grid place-items-center rounded-[var(--radius-control)] bg-[var(--surface)]/95 hover:bg-[var(--surface-raised)] text-[var(--accent)] border border-[var(--border)] shadow-[var(--shadow-panel)] transition cursor-pointer"
                 title="Reset Center [101.5034, 3.1942]"
                 aria-label="Reset Center"
               >
@@ -1076,19 +1125,10 @@ export function TownshipTransparencyExplorer() {
             </div>
 
             {/* Bottom-Left Canopy Health Legend */}
-            <div className="hidden sm:flex absolute bottom-3.5 left-3.5 z-20 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 shadow-lg items-center gap-3 text-[11px] pointer-events-auto">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30" />
-                <span className="text-slate-200 font-medium">Healthy (&ge;80%)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/30" />
-                <span className="text-slate-200 font-medium">Stress (50–79%)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-500/30" />
-                <span className="text-slate-200 font-medium">Critical (&lt;50%)</span>
-              </div>
+            <div className="hidden sm:flex absolute bottom-3.5 left-3.5 z-20 bg-[var(--surface)]/95 backdrop-blur-md border border-[var(--border)] rounded-[var(--radius-control)] px-3.5 py-2 shadow-[var(--shadow-panel)] items-center gap-4 text-xs pointer-events-auto">
+              <StatusBadge tone="healthy">Healthy (&ge;80%)</StatusBadge>
+              <StatusBadge tone="warning">Stress (50–79%)</StatusBadge>
+              <StatusBadge tone="critical">Critical (&lt;50%)</StatusBadge>
             </div>
 
             {/* Live WebGL Map Surface (with resilient SVG fallback if WebGL is disabled) */}
@@ -1097,7 +1137,7 @@ export function TownshipTransparencyExplorer() {
             ) : (
               <div
                 onClick={() => setSelectedTree(null)}
-                className="relative w-full h-full bg-slate-950 overflow-hidden"
+                className="relative w-full h-full bg-[var(--background)] overflow-hidden"
               >
                 <svg
                   viewBox="0 0 1000 520"
@@ -1115,11 +1155,7 @@ export function TownshipTransparencyExplorer() {
                       <path
                         d="M 45 0 L 0 0 0 45"
                         fill="none"
-                        stroke={
-                          mapStyleMode === 'satellite'
-                            ? 'rgba(16, 185, 129, 0.14)'
-                            : 'rgba(51, 65, 85, 0.35)'
-                        }
+                        stroke="rgba(201, 237, 218, 0.14)"
                         strokeWidth="1"
                       />
                     </pattern>
@@ -1128,32 +1164,28 @@ export function TownshipTransparencyExplorer() {
                         offset="0%"
                         stopColor={
                           mapStyleMode === 'satellite'
-                            ? 'rgba(6, 95, 70, 0.55)'
-                            : 'rgba(16, 185, 129, 0.16)'
+                            ? 'rgba(33, 101, 75, 0.55)'
+                            : 'rgba(82, 217, 165, 0.16)'
                         }
                       />
                       <stop
                         offset="55%"
                         stopColor={
                           mapStyleMode === 'satellite'
-                            ? 'rgba(4, 47, 46, 0.35)'
-                            : 'rgba(15, 23, 42, 0.1)'
+                            ? 'rgba(21, 53, 43, 0.4)'
+                            : 'rgba(21, 53, 43, 0.15)'
                         }
                       />
-                      <stop offset="100%" stopColor="rgba(2, 6, 23, 0.95)" />
+                      <stop offset="100%" stopColor="rgba(11, 29, 24, 0.95)" />
                     </radialGradient>
                     <linearGradient id="elmina-lake-depth" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="rgba(14, 116, 144, 0.55)" />
-                      <stop offset="50%" stopColor="rgba(3, 105, 161, 0.45)" />
-                      <stop offset="100%" stopColor="rgba(15, 23, 42, 0.7)" />
+                      <stop offset="0%" stopColor="rgba(89, 200, 232, 0.45)" />
+                      <stop offset="50%" stopColor="rgba(33, 101, 75, 0.45)" />
+                      <stop offset="100%" stopColor="rgba(11, 29, 24, 0.75)" />
                     </linearGradient>
                   </defs>
 
-                  <rect
-                    width="1000"
-                    height="520"
-                    fill={mapStyleMode === 'satellite' ? '#041311' : '#020617'}
-                  />
+                  <rect width="1000" height="520" fill="#0b1d18" />
                   <rect width="1000" height="520" fill="url(#elmina-canopy-biomass)" />
                   <rect width="1000" height="520" fill="url(#elmina-gis-grid)" />
 
@@ -1163,7 +1195,7 @@ export function TownshipTransparencyExplorer() {
                     rx="390"
                     ry="195"
                     fill="none"
-                    stroke="rgba(16, 185, 129, 0.16)"
+                    stroke="rgba(82, 217, 165, 0.18)"
                     strokeWidth="1.2"
                     strokeDasharray="8 6"
                   />
@@ -1172,8 +1204,8 @@ export function TownshipTransparencyExplorer() {
                     cy="255"
                     rx="295"
                     ry="145"
-                    fill="rgba(16, 185, 129, 0.06)"
-                    stroke="rgba(16, 185, 129, 0.22)"
+                    fill="rgba(82, 217, 165, 0.06)"
+                    stroke="rgba(82, 217, 165, 0.24)"
                     strokeWidth="1.2"
                   />
                   <ellipse
@@ -1181,22 +1213,22 @@ export function TownshipTransparencyExplorer() {
                     cy="255"
                     rx="195"
                     ry="95"
-                    fill="rgba(16, 185, 129, 0.09)"
-                    stroke="rgba(52, 211, 153, 0.25)"
+                    fill="rgba(82, 217, 165, 0.09)"
+                    stroke="rgba(213, 242, 180, 0.28)"
                     strokeWidth="1.2"
                   />
 
                   <path
                     d="M 35,345 C 185,330 295,235 465,250 C 615,265 735,205 965,165"
                     fill="none"
-                    stroke="rgba(14, 165, 233, 0.26)"
+                    stroke="rgba(89, 200, 232, 0.24)"
                     strokeWidth="34"
                     strokeLinecap="round"
                   />
                   <path
                     d="M 390,235 C 435,205 545,210 585,245 C 610,270 565,305 495,300 C 425,295 365,265 390,235 Z"
                     fill="url(#elmina-lake-depth)"
-                    stroke="rgba(56, 189, 248, 0.5)"
+                    stroke="rgba(89, 200, 232, 0.5)"
                     strokeWidth="1.8"
                   />
                 </svg>
@@ -1228,8 +1260,8 @@ export function TownshipTransparencyExplorer() {
                         <div
                           className={`relative flex items-center justify-center rounded-full transition-all duration-200 ${
                             isSelected
-                              ? 'w-9 h-9 ring-4 ring-white scale-110 shadow-2xl'
-                              : 'w-6 h-6 hover:scale-125 ring-2 ring-slate-950/95'
+                              ? 'w-9 h-9 ring-4 ring-[var(--foreground)] scale-110'
+                              : 'w-6 h-6 hover:scale-125 ring-2 ring-[var(--background)]'
                           }`}
                           style={{
                             backgroundColor: health.hex,
@@ -1239,7 +1271,7 @@ export function TownshipTransparencyExplorer() {
                           <Trees
                             className={`${
                               isSelected ? 'w-4 h-4' : 'w-3.5 h-3.5'
-                            } text-slate-950 stroke-[2.4]`}
+                            } text-[var(--background)] stroke-[2.4]`}
                           />
                         </div>
                       </button>
@@ -1251,7 +1283,7 @@ export function TownshipTransparencyExplorer() {
 
             {/* Selected Tree Telemetry Inspector Popover (Species, Health %, CO2, DLP status) */}
             {selectedTree && (
-              <div className="absolute bottom-3.5 left-3.5 right-3.5 sm:left-auto sm:right-3.5 sm:w-[390px] p-4 rounded-2xl bg-slate-950/95 border border-emerald-500/40 shadow-2xl backdrop-blur-xl space-y-3 z-30">
+              <div className="absolute bottom-3.5 left-3.5 right-3.5 sm:left-auto sm:right-3.5 sm:w-[390px] p-4 rounded-[var(--radius-panel)] bg-[var(--background)]/95 border border-[var(--control-border)] shadow-[var(--shadow-panel)] backdrop-blur-xl space-y-3 z-30">
                 {(() => {
                   const health = getHealthMeta(selectedTree.health_score || 0);
                   const dlp = getDlpStatusMeta(selectedTree.handover_status);
@@ -1260,21 +1292,17 @@ export function TownshipTransparencyExplorer() {
                     <>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--accent)] flex items-center justify-center shrink-0">
                             <Trees className="w-4 h-4" />
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white text-xs font-mono">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-[var(--foreground)] text-xs font-mono">
                                 {selectedTree.id}
                               </span>
-                              <span
-                                className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${dlp.badgeClass}`}
-                              >
-                                {dlp.label}
-                              </span>
+                              <StatusBadge tone={dlp.tone}>{dlp.label}</StatusBadge>
                             </div>
-                            <span className="text-[11px] text-slate-400 block mt-0.5">
+                            <span className="text-xs text-[var(--muted)] block mt-0.5">
                               {selectedTree.precinct}
                             </span>
                           </div>
@@ -1282,7 +1310,7 @@ export function TownshipTransparencyExplorer() {
                         <button
                           type="button"
                           onClick={() => setSelectedTree(null)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition cursor-pointer"
+                          className="w-9 h-9 grid place-items-center rounded-[var(--radius-control)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] transition cursor-pointer"
                           aria-label="Close tree details"
                         >
                           <X className="w-4 h-4" />
@@ -1290,19 +1318,22 @@ export function TownshipTransparencyExplorer() {
                       </div>
 
                       {/* Health Vitality Bar */}
-                      <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400 flex items-center gap-1">
-                            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                      <div className="p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--muted)] flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5 text-[var(--accent)]" />
                             <span>Canopy Health Score</span>
                           </span>
-                          <span className={`font-mono font-bold ${health.textClass}`}>
+                          <span
+                            className="font-mono font-semibold"
+                            style={{ color: health.textColorVar }}
+                          >
                             {selectedTree.health_score}% ({health.label})
                           </span>
                         </div>
-                        <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                        <div className="w-full h-2 rounded-[var(--radius-pill)] bg-[var(--background)] overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all duration-300"
+                            className="h-full rounded-[var(--radius-pill)] transition-all duration-300"
                             style={{
                               width: `${selectedTree.health_score}%`,
                               backgroundColor: health.hex,
@@ -1312,51 +1343,48 @@ export function TownshipTransparencyExplorer() {
                       </div>
 
                       {/* Core Tree Telemetry: Species, CO2, DLP Status, GPS */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-800/90">
+                      <div className="grid grid-cols-2 gap-2.5 text-xs pt-1 border-t border-[var(--border)]">
                         <div>
-                          <span className="text-slate-500 block">Species:</span>
-                          <span className="text-slate-100 font-semibold italic">
+                          <span className="text-[var(--muted)] block">Species:</span>
+                          <span className="text-[var(--foreground)] font-medium italic">
                             {selectedTree.species}
                           </span>
-                          <span className="text-[10px] text-slate-400 block">
+                          <span className="text-[11px] text-[var(--muted)] block">
                             {selectedTree.common_name || 'Forest Native'}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-500 block">CO₂ Sequestration:</span>
-                          <span className="text-teal-300 font-mono font-bold flex items-center gap-1">
-                            <Wind className="w-3 h-3 text-teal-400" />
+                          <span className="text-[var(--muted)] block">CO₂ Sequestration:</span>
+                          <span className="text-[var(--accent-soft)] font-mono font-semibold flex items-center gap-1">
+                            <Wind className="w-3.5 h-3.5 text-[var(--accent)]" />
                             {selectedTree.co2_kg_per_year} kg/year
                           </span>
-                          <span className="text-[10px] text-slate-400 block">
+                          <span className="text-[11px] text-[var(--muted)] block">
                             {dlp.warrantyNote}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-500 block">GPS Coordinates:</span>
-                          <span className="text-emerald-400 font-mono text-[10px]">
+                          <span className="text-[var(--muted)] block">GPS Coordinates:</span>
+                          <span className="text-[var(--accent)] font-mono text-[11px]">
                             {selectedTree.latitude.toFixed(5)}° N, {selectedTree.longitude.toFixed(5)}° E
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-500 block">DLP Status:</span>
-                          <span className="text-slate-200 font-mono text-[10px]">
+                          <span className="text-[var(--muted)] block">DLP Status:</span>
+                          <span className="text-[var(--foreground)] font-mono text-[11px]">
                             {selectedTree.handover_status}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                        <span className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]">
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+                        <span className="text-[11px] text-[var(--muted)] font-mono truncate max-w-[190px]">
                           QR: {selectedTree.qr_code_hash}
                         </span>
-                        <Link
-                          href="/app/explore"
-                          className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
-                        >
+                        <ButtonLink href="/app/explore" variant="text">
                           <span>Full dMRV Profile</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </Link>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </ButtonLink>
                       </div>
                     </>
                   );
@@ -1370,54 +1398,50 @@ export function TownshipTransparencyExplorer() {
       {/* (c) Latest Update on Tree Planting (Living Milestones Feed) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Latest Tree Planting & Maintenance Activity:</span>
+          <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-[var(--verification)]" />
+            <span>Latest Tree Planting &amp; Maintenance Activity:</span>
           </div>
-          <span className="text-[11px] text-cyan-400 font-medium hidden sm:inline">
-            Sealed on Arbitrum Sepolia
-          </span>
+          <StatusBadge tone="verified">Sealed on Arbitrum Sepolia</StatusBadge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {RECENT_MILESTONES.map((item) => (
             <div
               key={item.id}
-              className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-colors space-y-2.5"
+              className="p-4 rounded-[var(--radius-panel)] bg-[var(--background)] border border-[var(--border)] hover:border-[var(--control-border)] transition-colors space-y-2.5"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)]">
                   {item.date}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                  {item.status}
-                </span>
+                <StatusBadge tone="verified">{item.status}</StatusBadge>
               </div>
 
               <div>
-                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <div className="text-sm font-medium text-[var(--foreground)] flex items-center gap-1.5">
                   <span>{item.action}</span>
-                  <span className="text-[10px] text-emerald-400 font-mono">[{item.treeId}]</span>
+                  <span className="text-xs text-[var(--accent)] font-mono">[{item.treeId}]</span>
                 </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">{item.species}</div>
+                <div className="text-xs text-[var(--muted)] mt-0.5">{item.species}</div>
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/80">
+              <p className="text-xs text-[var(--foreground)] leading-relaxed bg-[var(--surface)] p-3 rounded-[var(--radius-control)] border border-[var(--border)]">
                 &ldquo;{item.note}&rdquo;
               </p>
 
-              <div className="flex items-center justify-between pt-1 text-[11px]">
-                <span className="text-slate-500 text-[10px]">
-                  Contractor: <strong className="text-slate-400">{item.contractor}</strong>
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <span className="text-[var(--muted)]">
+                  Contractor: <strong className="text-[var(--foreground)] font-medium">{item.contractor}</strong>
                 </span>
                 <a
                   href={`https://sepolia.arbiscan.io/tx/${item.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 text-[10px] font-mono"
+                  className="text-[var(--verification)] hover:text-[var(--foreground)] flex items-center gap-1 text-xs font-mono"
                 >
                   <span>Tx: {item.txHash.slice(0, 10)}...</span>
-                  <ExternalLink className="w-2.5 h-2.5" />
+                  <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </div>
@@ -1427,15 +1451,16 @@ export function TownshipTransparencyExplorer() {
 
       {/* (d) Contract Details: Public SLA & Maintenance Charter */}
       <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-            <span>Developer-Contractor SLA & Warranty Charter (Transparent Commitments):</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-[var(--verification)]" />
+            <span>Developer-Contractor SLA &amp; Warranty Charter (Transparent Commitments):</span>
           </div>
           <button
             type="button"
             onClick={() => setCharterOpen(!charterOpen)}
-            className="text-xs text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+            aria-expanded={charterOpen}
+            className="min-h-[44px] px-3 rounded-[var(--radius-control)] text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] flex items-center gap-1.5 cursor-pointer"
           >
             <span>{charterOpen ? 'Collapse' : 'Expand'}</span>
             {charterOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -1443,32 +1468,30 @@ export function TownshipTransparencyExplorer() {
         </div>
 
         {charterOpen && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
             {SLA_TERMS.map((term, index) => (
               <div
                 key={index}
-                className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 hover:border-purple-500/30 transition-colors"
+                className="p-4 rounded-[var(--radius-panel)] bg-[var(--background)] border border-[var(--border)] space-y-2 hover:border-[var(--control-border)] transition-colors"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-bold text-white">{term.title}</h4>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 shrink-0">
-                    {term.badge}
-                  </span>
+                  <h4 className="text-sm font-medium text-[var(--foreground)]">{term.title}</h4>
+                  <StatusBadge tone={term.tone}>{term.badge}</StatusBadge>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed">{term.description}</p>
+                <p className="text-xs text-[var(--muted)] leading-relaxed">{term.description}</p>
               </div>
             ))}
           </div>
         )}
 
         {/* Public Smart Contract Verification Reference */}
-        <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-300 font-medium">
+        <div className="p-4 rounded-[var(--radius-panel)] bg-[var(--background)] border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
+            <span className="text-[var(--foreground)] font-medium">
               TreeLedgerAudit Smart Contract:
             </span>
-            <code className="text-emerald-400 font-mono text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+            <code className="text-[var(--accent)] font-mono text-xs bg-[var(--surface)] px-2.5 py-1 rounded-[var(--radius-control)] border border-[var(--border)]">
               0x685049b310922F6bc8d6FA17ddae010E13803701
             </code>
           </div>
@@ -1477,10 +1500,10 @@ export function TownshipTransparencyExplorer() {
             href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold text-[11px] self-start sm:self-auto"
+            className="min-h-[44px] inline-flex items-center gap-1.5 text-[var(--verification)] hover:text-[var(--foreground)] font-medium text-xs self-start sm:self-auto"
           >
             <span>Verify On Arbiscan</span>
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
       </div>

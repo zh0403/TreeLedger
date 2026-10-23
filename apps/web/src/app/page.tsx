@@ -409,44 +409,44 @@ export default function Home() {
 
           {/* Smart Device Auto-Detection & Quick Launch Bar */}
           <div className="mb-10 max-w-4xl">
-            <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-5">
+            <div className="surface-panel p-5 sm:p-6 space-y-5 bg-[var(--background)] border border-[var(--border)]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0">
+                  <div className="w-11 h-11 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0">
                     {deviceType === "mobile" ? (
-                      <Smartphone className="w-5 h-5 text-emerald-400" />
+                      <Smartphone className="w-5 h-5 text-[var(--accent)]" />
                     ) : (
-                      <Laptop className="w-5 h-5 text-cyan-400" />
+                      <Laptop className="w-5 h-5 text-[var(--verification)]" />
                     )}
                   </div>
                   <div>
-                    <div className="text-[11px] text-slate-400 uppercase tracking-wider font-mono">
+                    <div className="text-[11px] text-[var(--muted)] uppercase tracking-wider font-mono">
                       Smart Device Auto-Detection
                     </div>
-                    <div className="text-sm font-semibold text-white flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-medium text-[var(--foreground)] flex flex-wrap items-center gap-2">
                       <span>
                         {deviceType === "mobile"
                           ? "Mobile Device Active"
                           : "Desktop Browser Active"}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-pill)] text-[11px] font-mono bg-[var(--surface)] text-[var(--accent-soft)] border border-[var(--border)]">
                         {detectionSource}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-1.5 self-start sm:self-auto bg-[var(--surface)] p-1 rounded-[var(--radius-pill)] border border-[var(--border)]">
                   <button
                     type="button"
                     onClick={() => {
                       setDeviceType("mobile");
                       setDetectionSource("Manual switch: Mobile");
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`min-h-[36px] px-3.5 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                       deviceType === "mobile"
-                        ? "bg-emerald-500 text-slate-950 font-semibold shadow-sm"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
                     }`}
                   >
                     <Smartphone className="w-3.5 h-3.5" />
@@ -459,10 +459,10 @@ export default function Home() {
                       setDeviceType("desktop");
                       setDetectionSource("Manual switch: Desktop");
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`min-h-[36px] px-3.5 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                       deviceType === "desktop"
-                        ? "bg-cyan-500 text-slate-950 font-semibold shadow-sm"
-                        : "text-slate-400 hover:text-white"
+                        ? "bg-[var(--verification)] text-[var(--accent-foreground)] font-semibold"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
                     }`}
                   >
                     <Laptop className="w-3.5 h-3.5" />
@@ -477,7 +477,7 @@ export default function Home() {
                   href={targetPath}
                   prefetch={true}
                   onClick={() => setRedirecting(targetPath)}
-                  className="w-full py-3.5 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-3 shadow-lg cursor-pointer"
+                  className="button button--primary w-full"
                 >
                   <span>
                     {redirecting ? `Loading ${redirecting}...` : targetLabel}
@@ -485,9 +485,9 @@ export default function Home() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 
-                <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="flex items-center justify-center gap-4 text-xs text-[var(--muted)]">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent)]" />
                     Target: {targetPath}
                   </span>
                   <span>•</span>
@@ -496,100 +496,100 @@ export default function Home() {
               </div>
 
               {/* Direct Service Route Quick Links */}
-              <div className="pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+              <div className="pt-3 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                 <Link
                   href="/app/explore"
                   onClick={() => setRedirecting("/app/explore")}
-                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 text-left transition-colors group flex items-center justify-between"
+                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <Trees className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <Trees className="w-4 h-4 text-[var(--accent)] shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold text-white">
+                      <div className="text-xs font-medium text-[var(--foreground)]">
                         Resident Explore
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
+                      <div className="text-[11px] text-[var(--muted)] font-mono">
                         /app/explore
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-emerald-400" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--accent)]" />
                 </Link>
 
                 <Link
                   href="/app/hazards"
                   onClick={() => setRedirecting("/app/hazards")}
-                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/40 text-left transition-colors group flex items-center justify-between"
+                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <AlertTriangle className="w-4 h-4 text-[var(--status-warning)] shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold text-white">
+                      <div className="text-xs font-medium text-[var(--foreground)]">
                         Hazard Triage
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
+                      <div className="text-[11px] text-[var(--muted)] font-mono">
                         /app/hazards
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-amber-400" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--status-warning)]" />
                 </Link>
 
                 <Link
                   href="/app/maintenance"
                   onClick={() => setRedirecting("/app/maintenance")}
-                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-cyan-500/40 text-left transition-colors group flex items-center justify-between"
+                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <ShieldCheck className="w-4 h-4 text-[var(--verification)] shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold text-white">
+                      <div className="text-xs font-medium text-[var(--foreground)]">
                         Audit Stream
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
+                      <div className="text-[11px] text-[var(--muted)] font-mono">
                         /app/maintenance
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-cyan-400" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--verification)]" />
                 </Link>
 
                 <Link
                   href="/contractor/tasks"
                   onClick={() => setRedirecting("/contractor/tasks")}
-                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/40 text-left transition-colors group flex items-center justify-between"
+                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <HardHat className="w-4 h-4 text-amber-300 shrink-0" />
+                    <HardHat className="w-4 h-4 text-[var(--accent-soft)] shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold text-white">
+                      <div className="text-xs font-medium text-[var(--foreground)]">
                         Field Portal
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
+                      <div className="text-[11px] text-[var(--muted)] font-mono">
                         /contractor/tasks
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-amber-300" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--accent-soft)]" />
                 </Link>
 
                 <Link
                   href="/admin"
                   onClick={() => setRedirecting("/admin")}
-                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-purple-500/40 text-left transition-colors group flex items-center justify-between"
+                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4 text-purple-400 shrink-0" />
+                    <LayoutDashboard className="w-4 h-4 text-[var(--verification)] shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold text-white">
+                      <div className="text-xs font-medium text-[var(--foreground)]">
                         Command Center
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
+                      <div className="text-[11px] text-[var(--muted)] font-mono">
                         /admin
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-purple-400" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--verification)]" />
                 </Link>
               </div>
             </div>

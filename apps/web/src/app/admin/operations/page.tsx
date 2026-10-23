@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import "@/components/admin/admin-gis.css";
 import { MainPrototypeNotice } from "@/components/main-services";
 import { Brand } from "@/components/ui/brand";
+import { StatusBadge } from "@/components/ui/status-badge";
 import TownshipMap, {
   TreeAsset,
   HandoverStatus,
@@ -17,8 +19,6 @@ import {
   Download,
   RefreshCw,
   AlertTriangle,
-  CheckCircle2,
-  Clock,
   FileSpreadsheet,
   Search,
   Filter,
@@ -27,8 +27,6 @@ import {
   ExternalLink,
   X,
   ArrowUpRight,
-  Scale,
-  BadgeAlert,
   Layers,
 } from "lucide-react";
 
@@ -474,7 +472,9 @@ export default function TownshipAdminCommandCenter() {
 
   useEffect(() => {
     // Let the initial map shell paint before starting provider synchronization.
-    const frame = requestAnimationFrame(() => { void syncTelemetry(); });
+    const frame = requestAnimationFrame(() => {
+      void syncTelemetry();
+    });
     return () => cancelAnimationFrame(frame);
   }, []);
 
@@ -489,9 +489,10 @@ export default function TownshipAdminCommandCenter() {
     const canopySurvivalIndex =
       totalAssets > 0
         ? Number(
-            ((survivingCount / totalAssets) * 0.7 * 100 + avgHealth * 0.3).toFixed(
-              1
-            )
+            (
+              (survivingCount / totalAssets) * 0.7 * 100 +
+              avgHealth * 0.3
+            ).toFixed(1)
           )
         : 0;
 
@@ -696,61 +697,53 @@ export default function TownshipAdminCommandCenter() {
   const renderStatusBadge = (status: ContractorSlaRow["status_tag"]) => {
     switch (status) {
       case "COMPLIANT":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            SLA Compliant
-          </span>
-        );
+        return <StatusBadge tone="healthy">SLA Compliant</StatusBadge>;
       case "AT_RISK":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            24h SLA Watch
-          </span>
-        );
+        return <StatusBadge tone="warning">24h SLA Watch</StatusBadge>;
       case "DEDUCTION_ENFORCED":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-300 border border-orange-500/30">
-            <Scale className="w-3.5 h-3.5 text-orange-400" />
-            Fee Clawback Active
-          </span>
-        );
+        return <StatusBadge tone="warning">Fee Clawback Active</StatusBadge>;
       case "CRITICAL_BREACH":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/15 text-red-300 border border-red-500/30">
-            <BadgeAlert className="w-3.5 h-3.5 text-red-400" />
-            Critical Breach
-          </span>
-        );
+        return <StatusBadge tone="critical">Critical Breach</StatusBadge>;
     }
   };
 
   return (
-    <div className="legacy-app min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-200" data-theme="dark">
+    <div
+      className="min-h-screen w-full bg-[var(--background)] text-[var(--foreground)] flex flex-col"
+      data-theme="dark"
+    >
       <MainPrototypeNotice home="/admin" />
-      {/* Top Executive Navigation Bar */}
-      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl px-6 py-4">
+
+      {/* Top Executive Navigation Bar harmonized with admin-gis.css */}
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl px-6 py-3.5">
         <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <Brand href="/admin" subtitle="City of Elmina · Operations prototype" />
+            <Brand
+              href="/admin"
+              subtitle="City of Elmina · Operations & SLA Ledger"
+            />
             <h1 className="sr-only">Township Operations Command Center</h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="min-h-[44px] px-3.5 py-1.5 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] text-xs text-[var(--muted)] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
               <span>Telemetry Sync:</span>
-              <span className="font-mono text-slate-200">{lastSyncedAt}</span>
+              <span className="font-mono text-[var(--foreground)]">
+                {lastSyncedAt}
+              </span>
             </div>
 
             <button
               type="button"
-              onClick={() => { setIsSyncing(true); void syncTelemetry(); }}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-200 flex items-center gap-2 transition cursor-pointer"
+              onClick={() => {
+                setIsSyncing(true);
+                void syncTelemetry();
+              }}
+              className="min-h-[44px] px-4 py-2 rounded-[var(--radius-control)] bg-[var(--surface-raised)] hover:bg-[var(--background)] border border-[var(--control-border)] text-xs font-medium text-[var(--foreground)] flex items-center gap-2 transition cursor-pointer"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 text-emerald-400 ${
+                className={`w-3.5 h-3.5 text-[var(--accent)] ${
                   isSyncing ? "animate-spin" : ""
                 }`}
               />
@@ -763,7 +756,7 @@ export default function TownshipAdminCommandCenter() {
                 setExportStep(0);
                 setIsEsgModalOpen(true);
               }}
-              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+              className="min-h-[44px] px-4 py-2 rounded-[var(--radius-control)] bg-[var(--accent)] hover:bg-[var(--accent-soft)] text-[var(--forest-950)] font-semibold text-xs flex items-center gap-2 shadow-lg transition cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Export Executive ESG Report</span>
@@ -780,40 +773,40 @@ export default function TownshipAdminCommandCenter() {
           className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
         >
           {/* KPI 1: Total Assets */}
-          <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800/90 shadow-lg flex flex-col justify-between">
+          <div className="p-5 rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] shadow-lg flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Total Indexed Assets
               </span>
-              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400">
+              <div className="p-2 rounded-[8px] bg-[rgba(89,200,232,0.12)] border border-[rgba(89,200,232,0.28)] text-[var(--verification)]">
                 <Trees className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2.5">
-              <span className="text-3xl font-bold font-mono text-white">
+              <span className="text-3xl font-bold font-mono text-[var(--foreground)]">
                 {kpiMetrics.totalAssets.toLocaleString()}
               </span>
-              <span className="text-xs text-emerald-400 font-medium flex items-center">
+              <span className="text-xs text-[var(--accent)] font-medium flex items-center">
                 <ArrowUpRight className="w-3.5 h-3.5" />
                 100% QR Anchored
               </span>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted)]">
               <span>
                 Pre-Handover:{" "}
-                <strong className="text-sky-300">
+                <strong className="text-[var(--verification)]">
                   {kpiMetrics.preHandoverCount}
                 </strong>
               </span>
               <span>
                 DLP Active:{" "}
-                <strong className="text-violet-300">
+                <strong className="text-[var(--accent-soft)]">
                   {kpiMetrics.dlpCount}
                 </strong>
               </span>
               <span>
                 Living:{" "}
-                <strong className="text-slate-200">
+                <strong className="text-[var(--foreground)]">
                   {kpiMetrics.commissionedCount}
                 </strong>
               </span>
@@ -821,26 +814,24 @@ export default function TownshipAdminCommandCenter() {
           </div>
 
           {/* KPI 2: Canopy Survival Index (%) */}
-          <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800/90 shadow-lg flex flex-col justify-between">
+          <div className="p-5 rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] shadow-lg flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Canopy Survival Index
               </span>
-              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <div className="p-2 rounded-[8px] bg-[rgba(82,217,165,0.12)] border border-[rgba(82,217,165,0.28)] text-[var(--accent)]">
                 <Activity className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2.5">
-              <span className="text-3xl font-bold font-mono text-white">
+              <span className="text-3xl font-bold font-mono text-[var(--foreground)]">
                 {kpiMetrics.canopySurvivalIndex}%
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">
-                Target &ge; 85.0%
-              </span>
+              <StatusBadge tone="healthy">Target &ge; 85.0%</StatusBadge>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted)]">
               <span>Gemini 3.8 Vision Graded</span>
-              <span className="text-amber-300 font-medium">
+              <span className="text-[var(--status-warning)] font-medium">
                 {trees.filter((t) => t.health_score < 50).length} Critical
                 Intervention(s)
               </span>
@@ -848,31 +839,31 @@ export default function TownshipAdminCommandCenter() {
           </div>
 
           {/* KPI 3: SLA Compliance (%) */}
-          <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800/90 shadow-lg flex flex-col justify-between">
+          <div className="p-5 rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] shadow-lg flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Contractor SLA Compliance
               </span>
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+              <div className="p-2 rounded-[8px] bg-[rgba(230,168,58,0.12)] border border-[rgba(230,168,58,0.28)] text-[var(--status-warning)]">
                 <ShieldCheck className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2.5">
-              <span className="text-3xl font-bold font-mono text-white">
+              <span className="text-3xl font-bold font-mono text-[var(--foreground)]">
                 {kpiMetrics.avgSlaCompliance}%
               </span>
-              <span className="text-xs text-amber-300 font-medium">
+              <span className="text-xs text-[var(--status-warning)] font-medium">
                 24h Critical Resolution SLA
               </span>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted)]">
               <span>
                 Open Work Orders:{" "}
-                <strong className="text-slate-200">
+                <strong className="text-[var(--foreground)]">
                   {contractors.reduce((a, c) => a + c.unresolved_tasks, 0)}
                 </strong>
               </span>
-              <span className="text-red-300 font-mono">
+              <span className="text-[var(--status-critical-text)] font-mono">
                 RM{" "}
                 {contractors
                   .reduce((a, c) => a + c.automated_penalty_rm, 0)
@@ -883,31 +874,31 @@ export default function TownshipAdminCommandCenter() {
           </div>
 
           {/* KPI 4: Annual CO2 Sequestered */}
-          <div className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800/90 shadow-lg flex flex-col justify-between">
+          <div className="p-5 rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] shadow-lg flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Annual CO₂ Sequestered
               </span>
-              <div className="p-2 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400">
+              <div className="p-2 rounded-[8px] bg-[rgba(82,217,165,0.12)] border border-[rgba(82,217,165,0.28)] text-[var(--accent)]">
                 <Wind className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2.5">
-              <span className="text-3xl font-bold font-mono text-emerald-400">
+              <span className="text-3xl font-bold font-mono text-[var(--accent)]">
                 {kpiMetrics.annualCo2Kg.toLocaleString()}{" "}
-                <span className="text-lg font-normal text-slate-300">
+                <span className="text-lg font-normal text-[var(--muted)]">
                   kg/yr
                 </span>
               </span>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted)]">
               <span>
                 Aboveground Biomass:{" "}
-                <strong className="text-slate-200 font-mono">
+                <strong className="text-[var(--foreground)] font-mono">
                   {(kpiMetrics.totalBiomassKg / 1000).toFixed(2)} t
                 </strong>
               </span>
-              <span className="text-emerald-300 font-mono">
+              <span className="text-[var(--verification)] font-mono">
                 Arbitrum Verified
               </span>
             </div>
@@ -916,11 +907,11 @@ export default function TownshipAdminCommandCenter() {
 
         {/* 2. Geospatial Command Console & Quick-Filter Bar */}
         <section className="space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-slate-900/60 border border-slate-800/90 rounded-2xl p-3.5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-3.5">
             {/* Handover Lifecycle Segment Control */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-medium text-slate-400 px-2 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-medium text-[var(--muted)] px-2 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
                 Lifecycle Phase:
               </span>
               {(
@@ -938,10 +929,10 @@ export default function TownshipAdminCommandCenter() {
                   key={tab.id}
                   type="button"
                   onClick={() => setHandoverFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                  className={`min-h-[38px] px-3 py-1.5 rounded-[var(--radius-control)] text-xs font-medium transition cursor-pointer ${
                     handoverFilter === tab.id
-                      ? "bg-emerald-500 text-slate-950 font-semibold shadow"
-                      : "bg-slate-950/70 text-slate-300 hover:bg-slate-800 border border-slate-800"
+                      ? "bg-[var(--accent)] text-[var(--forest-950)] font-semibold shadow"
+                      : "bg-[var(--background)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] border border-[var(--border)]"
                   }`}
                 >
                   {tab.label}
@@ -951,8 +942,8 @@ export default function TownshipAdminCommandCenter() {
 
             {/* Health Tier Filter */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-medium text-slate-400 px-2 flex items-center gap-1.5">
-                <Filter className="w-3.5 h-3.5 text-sky-400" />
+              <span className="text-xs font-medium text-[var(--muted)] px-2 flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-[var(--verification)]" />
                 Health Band:
               </span>
               {(
@@ -967,10 +958,10 @@ export default function TownshipAdminCommandCenter() {
                   key={tier.id}
                   type="button"
                   onClick={() => setHealthFilter(tier.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+                  className={`min-h-[38px] px-3 py-1.5 rounded-[var(--radius-control)] text-xs font-medium transition cursor-pointer ${
                     healthFilter === tier.id
-                      ? "bg-slate-100 text-slate-950 font-semibold"
-                      : "bg-slate-950/70 text-slate-300 hover:bg-slate-800 border border-slate-800"
+                      ? "bg-[var(--foreground)] text-[var(--forest-950)] font-semibold"
+                      : "bg-[var(--background)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] border border-[var(--border)]"
                   }`}
                 >
                   {tier.label}
@@ -995,24 +986,24 @@ export default function TownshipAdminCommandCenter() {
             </div>
 
             {/* Right-hand Live Tree Asset Roster & Hazard Triage Queue */}
-            <div className="xl:col-span-4 h-[540px] lg:h-[600px] rounded-2xl bg-slate-900/70 border border-slate-800/90 flex flex-col overflow-hidden">
-              <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+            <div className="xl:col-span-4 h-[540px] lg:h-[600px] rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface-raised)]/60">
                 <div>
-                  <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <h2 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[var(--accent)]" />
                     Geospatial Tree Telemetry Feed
                   </h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-[var(--muted)] mt-0.5">
                     Click any asset to fly camera &amp; open quick-inspect
                     drawer
                   </p>
                 </div>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--foreground)]">
                   {trees.length} trees
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto divide-y divide-slate-800/70">
+              <div className="flex-1 overflow-y-auto divide-y divide-[var(--border)]">
                 {trees
                   .filter((t) => {
                     if (
@@ -1040,8 +1031,8 @@ export default function TownshipAdminCommandCenter() {
                         onClick={() => setSelectedTreeId(tree.id)}
                         className={`w-full text-left p-3.5 transition flex items-start justify-between gap-3 cursor-pointer ${
                           isSelected
-                            ? "bg-emerald-500/10 border-l-4 border-l-emerald-400"
-                            : "hover:bg-slate-800/50"
+                            ? "bg-[rgba(82,217,165,0.12)] border-l-4 border-l-[var(--accent)]"
+                            : "hover:bg-[var(--surface-raised)]/60"
                         }`}
                       >
                         <div className="space-y-1 min-w-0">
@@ -1049,14 +1040,14 @@ export default function TownshipAdminCommandCenter() {
                             <span
                               className={`w-2.5 h-2.5 rounded-full shrink-0 ${band.dotClass}`}
                             />
-                            <span className="font-mono text-xs font-bold text-emerald-400">
+                            <span className="font-mono text-xs font-bold text-[var(--accent)]">
                               {tree.id}
                             </span>
-                            <span className="text-xs font-semibold text-slate-100 truncate">
+                            <span className="text-xs font-semibold text-[var(--foreground)] truncate">
                               {tree.common_name}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-400 truncate">
+                          <p className="text-[11px] text-[var(--muted)] truncate">
                             {tree.precinct} •{" "}
                             <span className="italic">{tree.species}</span>
                           </p>
@@ -1067,7 +1058,7 @@ export default function TownshipAdminCommandCenter() {
                               {handover.shortLabel}
                             </span>
                             {activeHazards > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30 flex items-center gap-1">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(220,94,88,0.16)] text-[var(--status-critical-text)] border border-[rgba(220,94,88,0.34)] flex items-center gap-1">
                                 <AlertTriangle className="w-2.5 h-2.5" />
                                 {activeHazards} Hazard
                               </span>
@@ -1081,7 +1072,7 @@ export default function TownshipAdminCommandCenter() {
                           >
                             {tree.health_score}/100
                           </div>
-                          <div className="text-[11px] font-mono text-slate-400 mt-1">
+                          <div className="text-[11px] font-mono text-[var(--muted)] mt-1">
                             {tree.co2_kg_per_year} kg CO₂/yr
                           </div>
                         </div>
@@ -1094,16 +1085,16 @@ export default function TownshipAdminCommandCenter() {
         </section>
 
         {/* 3. Contractor SLA Compliance & Automated Deduction Table */}
-        <section className="rounded-2xl bg-slate-900/70 border border-slate-800/90 shadow-xl overflow-hidden">
-          <div className="p-5 border-b border-slate-800 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-slate-950/40">
+        <section className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] shadow-xl overflow-hidden">
+          <div className="p-5 border-b border-[var(--border)] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-[var(--surface-raised)]/45">
             <div>
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-base font-bold text-white">
+                <Building2 className="w-4 h-4 text-[var(--accent)]" />
+                <h2 className="text-base font-bold text-[var(--foreground)]">
                   Contractor SLA Compliance &amp; Automated Penalty Ledger
                 </h2>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[var(--muted)] mt-0.5">
                 Smart-contract enforced maintenance turnaround tracking with
                 mandatory geofenced before/after Vision verification
               </p>
@@ -1111,13 +1102,13 @@ export default function TownshipAdminCommandCenter() {
 
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-[var(--muted)] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={contractorSearch}
                   onChange={(e) => setContractorSearch(e.target.value)}
                   placeholder="Search contractor or precinct..."
-                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/60"
+                  className="min-h-[44px] pl-8 pr-3 py-1.5 rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--control-border)] text-xs text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--verification)]"
                 />
               </div>
 
@@ -1125,7 +1116,7 @@ export default function TownshipAdminCommandCenter() {
                 value={contractorStatusFilter}
                 onChange={(e) => setContractorStatusFilter(e.target.value)}
                 aria-label="Filter contractors by SLA status"
-                className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/60"
+                className="min-h-[44px] px-3 py-1.5 rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--control-border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--verification)]"
               >
                 <option value="ALL">All Status Tags</option>
                 <option value="COMPLIANT">SLA Compliant</option>
@@ -1141,7 +1132,7 @@ export default function TownshipAdminCommandCenter() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800/90 bg-slate-950/70 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <tr className="border-b border-[var(--border)] bg-[var(--background)]/75 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                   <th className="py-3.5 px-4">Contractor &amp; ID</th>
                   <th className="py-3.5 px-4">Assigned Precinct</th>
                   <th className="py-3.5 px-4">Avg Turnaround Time</th>
@@ -1151,25 +1142,25 @@ export default function TownshipAdminCommandCenter() {
                   <th className="py-3.5 px-4">Status Tag</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/70 text-xs">
+              <tbody className="divide-y divide-[var(--border)] text-xs">
                 {filteredContractors.map((row) => {
                   const isOverTarget =
                     row.avg_turnaround_hours > row.sla_target_hours;
                   return (
                     <tr
                       key={row.contractor_id}
-                      className="hover:bg-slate-800/40 transition"
+                      className="hover:bg-[var(--surface-raised)]/50 transition"
                     >
                       <td className="py-4 px-4">
-                        <div className="font-semibold text-slate-100">
+                        <div className="font-semibold text-[var(--foreground)]">
                           {row.company_name}
                         </div>
-                        <div className="font-mono text-[11px] text-emerald-400 mt-0.5">
+                        <div className="font-mono text-[11px] text-[var(--accent)] mt-0.5">
                           {row.contractor_id} • {row.sla_compliance_pct}% SLA
                         </div>
                       </td>
 
-                      <td className="py-4 px-4 text-slate-300">
+                      <td className="py-4 px-4 text-[var(--muted)]">
                         {row.assigned_precinct}
                       </td>
 
@@ -1178,20 +1169,22 @@ export default function TownshipAdminCommandCenter() {
                           <span
                             className={`font-mono font-bold text-sm ${
                               isOverTarget
-                                ? "text-red-400"
-                                : "text-emerald-400"
+                                ? "text-[var(--status-critical-text)]"
+                                : "text-[var(--accent)]"
                             }`}
                           >
                             {row.avg_turnaround_hours.toFixed(1)}h
                           </span>
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-[var(--muted)]">
                             / {row.sla_target_hours}h SLA
                           </span>
                         </div>
-                        <div className="w-28 h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1.5">
+                        <div className="w-28 h-1.5 bg-[var(--background)] rounded-full overflow-hidden mt-1.5">
                           <div
                             className={`h-full rounded-full ${
-                              isOverTarget ? "bg-red-500" : "bg-emerald-500"
+                              isOverTarget
+                                ? "bg-[var(--status-critical)]"
+                                : "bg-[var(--accent)]"
                             }`}
                             style={{
                               width: `${Math.min(
@@ -1205,11 +1198,11 @@ export default function TownshipAdminCommandCenter() {
 
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-semibold text-slate-100 text-sm">
+                          <span className="font-mono font-semibold text-[var(--foreground)] text-sm">
                             {row.unresolved_tasks}
                           </span>
                           {row.critical_overdue > 0 && (
-                            <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30 text-[10px] font-mono font-semibold">
+                            <span className="px-2 py-0.5 rounded bg-[rgba(220,94,88,0.16)] text-[var(--status-critical-text)] border border-[rgba(220,94,88,0.34)] text-[10px] font-mono font-semibold">
                               {row.critical_overdue} overdue &gt;24h
                             </span>
                           )}
@@ -1217,14 +1210,14 @@ export default function TownshipAdminCommandCenter() {
                       </td>
 
                       <td className="py-4 px-4">
-                        <div className="font-mono text-slate-200 font-semibold">
+                        <div className="font-mono text-[var(--foreground)] font-semibold">
                           {row.verified_proofs_count} verified
                         </div>
                         <a
                           href={`https://sepolia.arbiscan.io/tx/${row.last_arbitrum_tx}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[11px] font-mono text-sky-400 hover:text-sky-300 inline-flex items-center gap-1 mt-0.5"
+                          className="text-[11px] font-mono text-[var(--verification)] hover:underline inline-flex items-center gap-1 mt-0.5"
                         >
                           {row.last_arbitrum_tx.slice(0, 10)}...
                           <ExternalLink className="w-3 h-3" />
@@ -1234,15 +1227,15 @@ export default function TownshipAdminCommandCenter() {
                       <td className="py-4 px-4">
                         {row.automated_penalty_rm > 0 ? (
                           <div>
-                            <span className="font-mono font-bold text-red-400 text-sm">
+                            <span className="font-mono font-bold text-[var(--status-critical-text)] text-sm">
                               - RM {row.automated_penalty_rm.toLocaleString()}
                             </span>
-                            <div className="text-[10px] text-slate-400">
+                            <div className="text-[10px] text-[var(--muted)]">
                               {row.penalty_rate_pct}% monthly retainer deduction
                             </div>
                           </div>
                         ) : (
-                          <span className="font-mono text-emerald-400 font-medium">
+                          <span className="font-mono text-[var(--accent)] font-medium">
                             RM 0 (Zero Deductions)
                           </span>
                         )}
@@ -1263,26 +1256,26 @@ export default function TownshipAdminCommandCenter() {
       {/* 4. Executive ESG Report Export Modal */}
       {isEsgModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-[var(--background)]/82 backdrop-blur-md flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="esg-modal-title"
         >
-          <div className="w-full max-w-2xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+          <div className="w-full max-w-2xl rounded-[var(--radius-dialog)] bg-[var(--surface)] border border-[var(--border)] shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="p-5 border-b border-slate-800 flex items-start justify-between bg-slate-950/60">
+            <div className="p-5 border-b border-[var(--border)] flex items-start justify-between bg-[var(--surface-raised)]/60">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                <div className="p-2.5 rounded-[var(--radius-control)] bg-[rgba(82,217,165,0.14)] border border-[rgba(82,217,165,0.3)] text-[var(--accent)]">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
                   <h2
                     id="esg-modal-title"
-                    className="text-base font-bold text-white"
+                    className="text-base font-bold text-[var(--foreground)]"
                   >
                     Executive ESG &amp; Decarbonization dMRV Export
                   </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-[var(--muted)] mt-0.5">
                     Audit-grade biomass &amp; carbon sequestration aggregation
                     anchored on Arbitrum Sepolia
                   </p>
@@ -1291,7 +1284,7 @@ export default function TownshipAdminCommandCenter() {
               <button
                 type="button"
                 onClick={() => setIsEsgModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                className="min-h-[36px] min-w-[36px] p-1.5 rounded-[8px] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] transition cursor-pointer flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1301,48 +1294,48 @@ export default function TownshipAdminCommandCenter() {
             <div className="p-5 space-y-5">
               {/* Aggregate Township Totals */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[11px] text-slate-400 uppercase font-semibold">
+                <div className="p-3.5 rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)]">
+                  <div className="text-[11px] text-[var(--muted)] uppercase font-semibold">
                     Total Precinct Biomass
                   </div>
-                  <div className="text-xl font-bold font-mono text-white mt-1">
+                  <div className="text-xl font-bold font-mono text-[var(--foreground)] mt-1">
                     {(kpiMetrics.totalBiomassKg / 1000).toFixed(2)} t
                   </div>
-                  <div className="text-[11px] text-slate-400 font-mono">
+                  <div className="text-[11px] text-[var(--muted)] font-mono">
                     ({kpiMetrics.totalBiomassKg.toLocaleString()} kg dry weight)
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[11px] text-slate-400 uppercase font-semibold">
+                <div className="p-3.5 rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)]">
+                  <div className="text-[11px] text-[var(--muted)] uppercase font-semibold">
                     Annual Sequestered CO₂e
                   </div>
-                  <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
+                  <div className="text-xl font-bold font-mono text-[var(--accent)] mt-1">
                     {kpiMetrics.annualCo2Kg.toLocaleString()} kg/yr
                   </div>
-                  <div className="text-[11px] text-slate-400 font-mono">
+                  <div className="text-[11px] text-[var(--muted)] font-mono">
                     {(kpiMetrics.annualCo2Kg / 1000).toFixed(3)} tCO₂e / year
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[11px] text-slate-400 uppercase font-semibold">
+                <div className="p-3.5 rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)]">
+                  <div className="text-[11px] text-[var(--muted)] uppercase font-semibold">
                     Canopy Survival Rate
                   </div>
-                  <div className="text-xl font-bold font-mono text-sky-400 mt-1">
+                  <div className="text-xl font-bold font-mono text-[var(--verification)] mt-1">
                     {kpiMetrics.canopySurvivalIndex}%
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] text-[var(--muted)]">
                     Across {kpiMetrics.totalAssets} audited trees
                   </div>
                 </div>
               </div>
 
               {/* Precinct Breakdown Table */}
-              <div className="rounded-xl border border-slate-800 overflow-hidden">
+              <div className="rounded-[var(--radius-control)] border border-[var(--border)] overflow-hidden">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-950 text-[11px] uppercase text-slate-400 border-b border-slate-800">
+                    <tr className="bg-[var(--background)] text-[11px] uppercase text-[var(--muted)] border-b border-[var(--border)]">
                       <th className="py-2.5 px-3">Precinct Sector</th>
                       <th className="py-2.5 px-3">Trees</th>
                       <th className="py-2.5 px-3">Biomass (kg)</th>
@@ -1350,22 +1343,22 @@ export default function TownshipAdminCommandCenter() {
                       <th className="py-2.5 px-3">Mean Health</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/70 bg-slate-950/40">
+                  <tbody className="divide-y divide-[var(--border)] bg-[var(--surface-raised)]/35">
                     {precinctEsgBreakdown.map((item) => (
                       <tr key={item.precinct}>
-                        <td className="py-2.5 px-3 font-medium text-slate-200">
+                        <td className="py-2.5 px-3 font-medium text-[var(--foreground)]">
                           {item.precinct}
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-slate-300">
+                        <td className="py-2.5 px-3 font-mono text-[var(--muted)]">
                           {item.treeCount}
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-slate-300">
+                        <td className="py-2.5 px-3 font-mono text-[var(--muted)]">
                           {item.biomassKg.toLocaleString()} kg
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">
+                        <td className="py-2.5 px-3 font-mono text-[var(--accent)] font-semibold">
                           {item.co2KgPerYear.toFixed(1)} kg
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-slate-200">
+                        <td className="py-2.5 px-3 font-mono text-[var(--foreground)]">
                           {item.avgHealth}/100
                         </td>
                       </tr>
@@ -1376,23 +1369,23 @@ export default function TownshipAdminCommandCenter() {
 
               {/* Reporting Standard Selection */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block">
+                <label className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] block">
                   Compliance Reporting Standard
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setEsgExportFormat("BURSA_ESG_CSV")}
-                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                    className={`p-3 rounded-[var(--radius-control)] border text-left transition cursor-pointer ${
                       esgExportFormat === "BURSA_ESG_CSV"
-                        ? "bg-emerald-500/15 border-emerald-500/50 text-white"
-                        : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800/50"
+                        ? "bg-[rgba(82,217,165,0.14)] border-[var(--accent)] text-[var(--foreground)]"
+                        : "bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-raised)]"
                     }`}
                   >
                     <div className="text-xs font-semibold">
                       Bursa Malaysia Sustainability CSV
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-[var(--muted)] mt-0.5">
                       Precinct biomass, survival rate &amp; Arbitrum proof
                       columns
                     </div>
@@ -1401,16 +1394,16 @@ export default function TownshipAdminCommandCenter() {
                   <button
                     type="button"
                     onClick={() => setEsgExportFormat("GRI_304_JSON")}
-                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                    className={`p-3 rounded-[var(--radius-control)] border text-left transition cursor-pointer ${
                       esgExportFormat === "GRI_304_JSON"
-                        ? "bg-emerald-500/15 border-emerald-500/50 text-white"
-                        : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800/50"
+                        ? "bg-[rgba(82,217,165,0.14)] border-[var(--accent)] text-[var(--foreground)]"
+                        : "bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-raised)]"
                     }`}
                   >
                     <div className="text-xs font-semibold">
                       GRI 304 Biodiversity dMRV JSON
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-[var(--muted)] mt-0.5">
                       Machine-verifiable schema with keccak256 state root
                     </div>
                   </button>
@@ -1419,9 +1412,9 @@ export default function TownshipAdminCommandCenter() {
 
               {/* Export Simulation Stepper */}
               {exportStep > 0 && (
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                <div className="p-4 rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-emerald-400">
+                    <span className="font-semibold text-[var(--accent)]">
                       {exportStep === 1 &&
                         "Step 1/3: Aggregating PostGIS canopy polygons & allometric biomass..."}
                       {exportStep === 2 &&
@@ -1431,20 +1424,22 @@ export default function TownshipAdminCommandCenter() {
                       {exportStep === 4 &&
                         "Audit Package Signed & Downloaded Successfully"}
                     </span>
-                    <span className="font-mono text-slate-400">
+                    <span className="font-mono text-[var(--muted)]">
                       {Math.min(100, exportStep * 25)}%
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-[var(--surface-raised)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 transition-all duration-500"
+                      className="h-full bg-[var(--accent)] transition-all duration-500"
                       style={{ width: `${Math.min(100, exportStep * 25)}%` }}
                     />
                   </div>
                   {exportStep === 4 && exportHash && (
-                    <div className="pt-1 text-[11px] font-mono text-slate-400 break-all">
+                    <div className="pt-1 text-[11px] font-mono text-[var(--muted)] break-all">
                       Arbitrum State Root:{" "}
-                      <span className="text-emerald-300">{exportHash}</span>
+                      <span className="text-[var(--verification)]">
+                        {exportHash}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1452,11 +1447,11 @@ export default function TownshipAdminCommandCenter() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-end gap-3">
+            <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-raised)]/50 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsEsgModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition cursor-pointer"
+                className="min-h-[44px] px-4 py-2 rounded-[var(--radius-control)] bg-[var(--surface-raised)] hover:bg-[var(--background)] border border-[var(--control-border)] text-xs font-medium text-[var(--foreground)] transition cursor-pointer"
               >
                 Close
               </button>
@@ -1464,7 +1459,7 @@ export default function TownshipAdminCommandCenter() {
                 type="button"
                 onClick={handleRunEsgExport}
                 disabled={exportStep > 0 && exportStep < 4}
-                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-semibold text-xs flex items-center gap-2 transition cursor-pointer"
+                className="min-h-[44px] px-4 py-2 rounded-[var(--radius-control)] bg-[var(--accent)] hover:bg-[var(--accent-soft)] disabled:opacity-50 text-[var(--forest-950)] font-semibold text-xs flex items-center gap-2 transition cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>

@@ -28,6 +28,7 @@ import {
   MaintenanceActionType,
   MaintenanceRecord,
 } from '@/lib/types';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 const ACTION_OPTIONS: {
   value: MaintenanceActionType;
@@ -87,10 +88,15 @@ export default function ContractorTasksPage() {
 
   useEffect(() => {
     let active = true;
-    void fetchHazards().then(data => {
-      if (active) { setHazards(data); setLoading(false); }
+    void fetchHazards().then((data) => {
+      if (active) {
+        setHazards(data);
+        setLoading(false);
+      }
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredTasks = useMemo(() => {
@@ -140,7 +146,8 @@ export default function ContractorTasksPage() {
     setAfterPhotoName('Geofenced field camera ready');
     setNotes(
       `Resolved incident #${task.id} on ${task.tree_id}: ${
-        task.recommended_sla_action || 'Completed prescribed arborist intervention.'
+        task.recommended_sla_action ||
+        'Completed prescribed arborist intervention.'
       }`
     );
   };
@@ -182,102 +189,128 @@ export default function ContractorTasksPage() {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Contractor SLA Summary Header */}
-      <section className="rounded-2xl bg-gradient-to-br from-amber-950/60 via-slate-900 to-slate-900 border border-amber-500/30 p-4 shadow-lg space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+    <div className="space-y-5 font-sans text-[var(--foreground)]">
+      {/* Contractor SLA Summary Header (High Outdoor Contrast) */}
+      <section
+        className="surface-panel p-5 space-y-4"
+        style={{
+          background:
+            'radial-gradient(ellipse at top right, var(--ambient), transparent 65%), var(--surface)',
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-[var(--accent)] text-xs font-medium uppercase tracking-wider">
             <HardHat className="w-4 h-4" />
-            <span>Contractor Work Order Queue</span>
+            <span>Contractor Field Work Order Queue</span>
           </div>
-          <span className="rounded-md bg-slate-950/80 border border-amber-500/30 px-2 py-0.5 text-[10px] font-mono text-amber-300">
+          <span className="rounded-[var(--radius-pill)] bg-[var(--background)] border border-[var(--control-border)] px-3 py-1 text-xs font-mono text-[var(--accent-soft)]">
             Crew: ARB-SD-04
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3">
-            <span className="text-[11px] text-slate-400 block">
-              Open Work Orders
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-2xl font-bold font-mono text-white">
-                {activeCount}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] p-4 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-[var(--muted)] block">
+                Open Work Orders
               </span>
-              <span className="text-[11px] text-amber-300 font-medium">
-                Pending PoW
-              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-3xl font-medium font-mono text-[var(--foreground)]">
+                  {activeCount}
+                </span>
+                <span className="text-xs text-[var(--status-warning)] font-medium">
+                  Pending Proof-of-Work
+                </span>
+              </div>
             </div>
+            <Wrench className="w-6 h-6 text-[var(--accent)]" />
           </div>
 
-          <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3">
-            <span className="text-[11px] text-slate-400 block">
-              24H Critical SLA
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-2xl font-bold font-mono text-rose-400">
-                {criticalCount}
+          <div className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] p-4 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-[var(--muted)] block">
+                24H Critical SLA Countdown
               </span>
-              <span className="text-[11px] text-rose-300 font-medium">
-                High Priority
-              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span
+                  className="text-3xl font-medium font-mono"
+                  style={{ color: 'var(--status-critical-text)' }}
+                >
+                  {criticalCount}
+                </span>
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: 'var(--status-critical-text)' }}
+                >
+                  Immediate Dispatch
+                </span>
+              </div>
             </div>
+            <Clock className="w-6 h-6 text-[var(--status-warning)]" />
           </div>
         </div>
       </section>
 
       {/* Recently Minted Arbitrum Receipt Banner */}
       {lastReceipt && (
-        <div className="rounded-2xl bg-emerald-950/40 border border-emerald-500/40 p-3.5 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              Proof-of-Work Verified & Anchored on Arbitrum
+        <div
+          className="surface-panel p-4 space-y-2.5"
+          style={{
+            borderColor: 'var(--proof-400)',
+            background: 'var(--surface-raised)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-[var(--proof-400)] flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-[var(--proof-400)]" />
+              Proof-of-Work Verified &amp; Anchored on Arbitrum
             </span>
             <button
               type="button"
               onClick={() => setLastReceipt(null)}
-              className="text-slate-400 hover:text-white"
+              className="min-h-[44px] min-w-[44px] grid place-items-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer"
+              aria-label="Dismiss receipt notice"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-[11px] text-slate-300">
+          <p className="text-xs text-[var(--foreground)]">
             Tree <strong>{lastReceipt.tree_id}</strong> maintenance receipt
             recorded. Tx:{' '}
-            <code className="font-mono text-emerald-300">
+            <code className="font-mono text-[var(--proof-400)]">
               {lastReceipt.arbitrum_tx_hash.slice(0, 14)}...
             </code>
           </p>
-          <div className="flex items-center gap-3 pt-0.5">
+          <div className="flex flex-wrap items-center gap-4 pt-1">
             <Link
               href="/app/maintenance"
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300"
+              className="min-h-[44px] inline-flex items-center gap-1.5 text-xs font-medium text-[var(--accent)] hover:text-[var(--foreground)]"
             >
-              View Public Audit Stream <ArrowRight className="w-3 h-3" />
+              View Public Audit Stream <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <a
               href={`https://sepolia.arbiscan.io/tx/${lastReceipt.arbitrum_tx_hash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300"
+              className="min-h-[44px] inline-flex items-center gap-1.5 text-xs font-medium text-[var(--proof-400)] hover:text-[var(--foreground)]"
             >
-              Arbiscan Receipt <ExternalLink className="w-3 h-3" />
+              Arbiscan Receipt <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         </div>
       )}
 
-      {/* Queue Filter Tabs */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="inline-flex rounded-xl bg-slate-900 border border-slate-800 p-1">
+      {/* Queue Filter Tabs (44px tap targets) */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-[var(--radius-pill)] bg-[var(--surface)] border border-[var(--border)] p-1 gap-1">
           <button
             type="button"
             onClick={() => setQueueFilter('ACTIVE')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            aria-pressed={queueFilter === 'ACTIVE'}
+            className={`min-h-[44px] rounded-[var(--radius-pill)] px-4 py-2 text-xs font-medium transition-colors cursor-pointer ${
               queueFilter === 'ACTIVE'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold'
+                : 'text-[var(--muted)] hover:text-[var(--foreground)]'
             }`}
           >
             Active Queue ({activeCount})
@@ -285,10 +318,11 @@ export default function ContractorTasksPage() {
           <button
             type="button"
             onClick={() => setQueueFilter('RESOLVED')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            aria-pressed={queueFilter === 'RESOLVED'}
+            className={`min-h-[44px] rounded-[var(--radius-pill)] px-4 py-2 text-xs font-medium transition-colors cursor-pointer ${
               queueFilter === 'RESOLVED'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold'
+                : 'text-[var(--muted)] hover:text-[var(--foreground)]'
             }`}
           >
             Resolved ({hazards.length - activeCount})
@@ -298,9 +332,9 @@ export default function ContractorTasksPage() {
         <button
           type="button"
           onClick={loadQueue}
-          className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200"
+          className="min-h-[44px] px-3.5 rounded-[var(--radius-control)] inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] bg-[var(--surface)] border border-[var(--border)] cursor-pointer"
         >
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Sync Queue
         </button>
       </div>
@@ -311,29 +345,29 @@ export default function ContractorTasksPage() {
           {[1, 2].map((n) => (
             <div
               key={n}
-              className="rounded-2xl bg-slate-900 border border-slate-800 p-4 animate-pulse space-y-3"
+              className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] p-4 animate-pulse space-y-3"
             >
               <div className="flex justify-between">
-                <div className="h-4 w-24 bg-slate-800 rounded" />
-                <div className="h-4 w-28 bg-slate-800 rounded" />
+                <div className="h-4 w-24 bg-[var(--surface-raised)] rounded" />
+                <div className="h-4 w-28 bg-[var(--surface-raised)] rounded" />
               </div>
-              <div className="h-24 w-full bg-slate-800 rounded-xl" />
-              <div className="h-10 w-full bg-slate-800 rounded-xl" />
+              <div className="h-24 w-full bg-[var(--surface-raised)] rounded-[var(--radius-control)]" />
+              <div className="h-11 w-full bg-[var(--surface-raised)] rounded-[var(--radius-control)]" />
             </div>
           ))}
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-8 text-center space-y-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+        <div className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] p-8 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center mx-auto text-[var(--accent)]">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-slate-200">
+            <p className="text-sm font-medium text-[var(--foreground)]">
               {queueFilter === 'ACTIVE'
                 ? 'All Assigned Work Orders Resolved'
                 : 'No Resolved Work Orders Yet'}
             </p>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+            <p className="text-xs text-[var(--muted)] max-w-xs mx-auto leading-relaxed">
               {queueFilter === 'ACTIVE'
                 ? 'Zero pending SLA tasks in your sector queue. Check the Resolved tab or public audit stream.'
                 : 'Complete an active task with proof-of-work photo capture to populate this log.'}
@@ -341,30 +375,33 @@ export default function ContractorTasksPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-4">
           {filteredTasks.map((task) => {
             const isCritical = task.ai_severity_grade === 'CRITICAL_24H';
             return (
               <article
                 key={task.id}
-                className={`rounded-2xl bg-slate-900/95 border p-4 space-y-3.5 shadow-md ${
-                  isCritical && task.status !== 'RESOLVED'
-                    ? 'border-rose-500/40'
-                    : 'border-slate-800/90'
-                }`}
+                className="surface-panel p-5 space-y-4 transition-colors"
+                style={{
+                  borderLeft: `4px solid ${
+                    isCritical && task.status !== 'RESOLVED'
+                      ? 'var(--status-critical)'
+                      : 'var(--accent)'
+                  }`,
+                }}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-800 text-emerald-400 border border-slate-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-medium px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--background)] text-[var(--accent)] border border-[var(--control-border)]">
                         WO #{task.id} • {task.tree_id}
                       </span>
-                      <span className="text-xs font-semibold text-white">
+                      <span className="text-sm font-medium text-[var(--foreground)]">
                         {task.hazard_type.replace('_', ' ')}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3 text-slate-500" />
+                    <p className="text-xs text-[var(--muted)] mt-1.5 flex items-center gap-1.5 font-mono">
+                      <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" />
                       <span>
                         GPS: {Number(task.latitude).toFixed(4)}°N,{' '}
                         {Number(task.longitude).toFixed(4)}°E
@@ -372,63 +409,69 @@ export default function ContractorTasksPage() {
                     </p>
                   </div>
 
-                  <span
-                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                      isCritical
-                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
-                        : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
-                    }`}
-                  >
-                    {task.ai_severity_grade === 'CRITICAL_24H'
-                      ? '24H SLA CRITICAL'
-                      : '72H STANDARD SLA'}
-                  </span>
+                  {/* Outdoor-Contrast SLA Countdown Badge */}
+                  <StatusBadge tone={isCritical ? 'critical' : 'warning'}>
+                    <span
+                      className="font-mono font-medium"
+                      style={{
+                        color: isCritical
+                          ? 'var(--status-critical-text)'
+                          : 'var(--status-warning)',
+                      }}
+                    >
+                      {isCritical ? '24H SLA CRITICAL' : '72H STANDARD SLA'}
+                    </span>
+                  </StatusBadge>
                 </div>
 
                 {/* Before Photo & AI Prescription */}
-                <div className="flex gap-3 items-start">
-                  <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-700 shrink-0 bg-slate-950">
+                <div className="flex flex-col sm:flex-row gap-3.5 items-start">
+                  <div className="relative w-full sm:w-28 h-28 rounded-[var(--radius-control)] overflow-hidden border border-[var(--control-border)] shrink-0 bg-[var(--background)]">
                     <img
                       src={task.evidence_photo_url}
                       alt={`Before photo for ${task.tree_id}`}
                       className="w-full h-full object-cover"
                     />
-                    <span className="absolute top-1.5 left-1.5 rounded bg-slate-950/90 px-1.5 py-0.5 text-[9px] font-bold text-rose-300 border border-rose-500/30">
+                    <span className="absolute top-2 left-2 rounded-[var(--radius-pill)] bg-[var(--background)]/90 px-2 py-0.5 text-[10px] font-mono font-medium text-[var(--status-critical-text)] border border-[var(--border)]">
                       BEFORE
                     </span>
                   </div>
 
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <p className="text-xs text-slate-200 leading-relaxed">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm text-[var(--foreground)] leading-relaxed">
                       {task.description}
                     </p>
-                    <div className="rounded-lg bg-slate-950/80 border border-slate-800 px-2.5 py-1.5 text-[11px] text-amber-200">
-                      <strong className="text-amber-400">Required Action:</strong>{' '}
+                    <div className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] px-3.5 py-2.5 text-xs text-[var(--foreground)]">
+                      <strong className="text-[var(--accent-soft)] font-medium">
+                        Required Action:
+                      </strong>{' '}
                       {task.recommended_sla_action ||
                         'Field arborist inspection & remedial maintenance'}
                     </div>
                   </div>
                 </div>
 
-                {/* Execution Controls */}
+                {/* Execution Controls (44px minimum height) */}
                 {task.status !== 'RESOLVED' ? (
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <div className="pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                      <Clock className="w-4 h-4 text-[var(--status-warning)]" />
                       <span>
                         Status:{' '}
-                        <strong className="text-slate-200">{task.status}</strong>
+                        <strong className="text-[var(--foreground)] font-mono">
+                          {task.status}
+                        </strong>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       {task.status !== 'DISPATCHED' && (
                         <button
                           type="button"
                           onClick={() => handleDispatch(task.id)}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition-colors"
+                          className="button button--secondary"
                         >
-                          <Play className="w-3.5 h-3.5 text-amber-400" />
+                          <Play className="w-3.5 h-3.5 text-[var(--status-warning)]" />
                           Dispatch Crew
                         </button>
                       )}
@@ -436,22 +479,22 @@ export default function ContractorTasksPage() {
                       <button
                         type="button"
                         onClick={() => openResolveModal(task)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 text-xs shadow-md transition-colors"
+                        className="button button--primary"
                       >
-                        <Camera className="w-3.5 h-3.5" />
+                        <Camera className="w-4 h-4" />
                         Upload Proof-of-Work
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-emerald-400">
-                    <span className="flex items-center gap-1.5 font-semibold">
+                  <div className="pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--accent)]">
+                    <span className="flex items-center gap-1.5 font-medium">
                       <CheckCircle2 className="w-4 h-4" />
                       Resolved with Verified Proof-of-Work
                     </span>
                     <Link
                       href="/app/maintenance"
-                      className="text-[11px] underline hover:text-emerald-300"
+                      className="min-h-[44px] inline-flex items-center text-xs underline text-[var(--proof-400)] hover:text-[var(--foreground)]"
                     >
                       View Audit Receipt
                     </Link>
@@ -463,25 +506,25 @@ export default function ContractorTasksPage() {
         </div>
       )}
 
-      {/* Proof-of-Work Upload & Task Resolution Drawer */}
+      {/* Proof-of-Work Upload & Task Resolution Dialog (field-workspace style) */}
       {activeTask && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Upload Proof-of-Work to Resolve Task"
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-[var(--scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
         >
-          <div className="w-full max-w-md rounded-t-3xl bg-slate-900 border-t border-x border-slate-800 p-4 max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <div className="w-full max-w-lg rounded-t-[var(--radius-dialog)] sm:rounded-[var(--radius-dialog)] bg-[var(--surface)] border border-[var(--control-border)] p-5 max-h-[92vh] overflow-y-auto space-y-4 shadow-[var(--shadow-panel)]">
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)]">
                   <Wrench className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-white">
+                  <h2 className="text-base font-medium text-[var(--foreground)]">
                     Submit Proof-of-Work • {activeTask.tree_id}
                   </h2>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-xs text-[var(--muted)]">
                     Work Order #{activeTask.id} • Geofenced AI Verification
                   </p>
                 </div>
@@ -489,19 +532,20 @@ export default function ContractorTasksPage() {
               <button
                 type="button"
                 onClick={() => setActiveTask(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="w-11 h-11 grid place-items-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCompleteWorkOrder} className="space-y-3.5">
+            <form onSubmit={handleCompleteWorkOrder} className="space-y-4">
               {/* Action Type Selector */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
                   Executed Maintenance Protocol
                 </label>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {ACTION_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -512,19 +556,21 @@ export default function ContractorTasksPage() {
                           setAfterPhotoUrl(opt.sampleAfterPhoto);
                         }
                       }}
-                      className={`w-full rounded-xl p-2.5 text-left border transition-all ${
+                      className={`w-full min-h-[56px] rounded-[var(--radius-control)] p-3 text-left border transition-all cursor-pointer ${
                         actionType === opt.value
-                          ? 'bg-emerald-500/15 border-emerald-500/50 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                          ? 'bg-[var(--surface-raised)] border-[var(--accent)] text-[var(--foreground)]'
+                          : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold">{opt.label}</span>
-                        <span className="font-mono text-[10px] text-emerald-400">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-[var(--foreground)]">
+                          {opt.label}
+                        </span>
+                        <span className="font-mono text-[11px] text-[var(--accent)]">
                           {opt.value}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
+                      <p className="text-xs text-[var(--muted)] mt-1">
                         {opt.desc}
                       </p>
                     </button>
@@ -535,10 +581,10 @@ export default function ContractorTasksPage() {
               {/* Side-by-Side Before & After Proof-of-Work Upload */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300">
+                  <label className="text-xs font-medium text-[var(--foreground)]">
                     Before vs. After Photographic Evidence
                   </label>
-                  <span className="text-[10px] font-mono text-emerald-400 truncate max-w-[160px]">
+                  <span className="text-xs font-mono text-[var(--accent-soft)] truncate max-w-[180px]">
                     {afterPhotoName}
                   </span>
                 </div>
@@ -553,18 +599,18 @@ export default function ContractorTasksPage() {
                 />
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <div className="relative h-36 rounded-xl overflow-hidden border border-rose-500/30 bg-slate-950">
+                  <div className="relative h-36 rounded-[var(--radius-control)] overflow-hidden border border-[var(--border)] bg-[var(--background)]">
                     <img
                       src={activeTask.evidence_photo_url}
                       alt="Reported before condition"
                       className="w-full h-full object-cover"
                     />
-                    <span className="absolute top-2 left-2 rounded bg-slate-950/90 border border-rose-500/40 px-2 py-0.5 text-[9px] font-bold text-rose-300">
+                    <span className="absolute top-2 left-2 rounded-[var(--radius-pill)] bg-[var(--background)]/90 border border-[var(--border)] px-2.5 py-0.5 text-[10px] font-mono font-medium text-[var(--status-critical-text)]">
                       BEFORE (INCIDENT)
                     </span>
                   </div>
 
-                  <div className="relative h-36 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-950">
+                  <div className="relative h-36 rounded-[var(--radius-control)] overflow-hidden border border-[var(--proof-400)]/50 bg-[var(--background)]">
                     {afterPhotoUrl ? (
                       <img
                         src={afterPhotoUrl}
@@ -572,20 +618,20 @@ export default function ContractorTasksPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">
+                      <div className="w-full h-full flex items-center justify-center text-xs text-[var(--muted)]">
                         No photo selected
                       </div>
                     )}
-                    <span className="absolute top-2 left-2 rounded bg-slate-950/90 border border-emerald-500/40 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                    <span className="absolute top-2 left-2 rounded-[var(--radius-pill)] bg-[var(--background)]/90 border border-[var(--proof-400)]/50 px-2.5 py-0.5 text-[10px] font-mono font-medium text-[var(--proof-400)]">
                       AFTER (PROOF)
                     </span>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-2 inset-x-2 inline-flex items-center justify-center gap-1 rounded-lg bg-slate-950/90 hover:bg-slate-900 border border-slate-700 py-1.5 text-[10px] font-semibold text-white shadow"
+                      className="min-h-[40px] absolute bottom-2 inset-x-2 inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--background)]/95 hover:bg-[var(--surface-raised)] border border-[var(--control-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] shadow cursor-pointer"
                     >
-                      <Upload className="w-3 h-3 text-emerald-400" />
-                      Capture / Upload Photo
+                      <Upload className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      Capture / Upload
                     </button>
                   </div>
                 </div>
@@ -593,7 +639,7 @@ export default function ContractorTasksPage() {
 
               {/* Arborist Field Notes */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
                   Arborist Completion Log
                 </label>
                 <textarea
@@ -601,32 +647,34 @@ export default function ContractorTasksPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Document completed pruning clearance, hydration volume, or staking specs..."
-                  className="w-full rounded-xl bg-slate-950 border border-slate-800 p-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--control-border)] p-3 text-xs text-[var(--foreground)] placeholder:text-[var(--muted)]"
                 />
               </div>
 
               {/* On-Chain Attestation Notice */}
-              <div className="rounded-xl bg-slate-950 border border-slate-800 p-2.5 flex items-center gap-2 text-[11px] text-slate-300">
-                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] p-3 flex items-center gap-2.5 text-xs text-[var(--muted)]">
+                <Sparkles className="w-4 h-4 text-[var(--proof-400)] shrink-0" />
                 <span>
                   Submitting triggers vision verification and writes a{' '}
-                  <code className="font-mono text-cyan-300">keccak256</code>{' '}
+                  <code className="font-mono text-[var(--proof-400)]">
+                    keccak256
+                  </code>{' '}
                   audit log to Arbitrum Sepolia.
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setActiveTask(null)}
-                  className="w-1/3 rounded-xl bg-slate-800 hover:bg-slate-700 py-2.5 text-xs font-semibold text-slate-300"
+                  className="button button--secondary w-1/3"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={resolving || !afterPhotoUrl}
-                  className="w-2/3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 text-xs shadow-lg disabled:opacity-50"
+                  className="button button--primary w-2/3"
                 >
                   {resolving
                     ? 'Verifying & Minting Audit Log...'

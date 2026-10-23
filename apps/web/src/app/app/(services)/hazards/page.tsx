@@ -8,6 +8,7 @@ import {
   Cpu,
   Eye,
   Filter,
+  GitBranch,
   MapPin,
   Plus,
   RefreshCw,
@@ -29,12 +30,29 @@ import {
   TriageResponse,
   Tree,
 } from '@/lib/types';
+import { StatusBadge } from '@/components/ui/status-badge';
 
-const STEPPER_STEPS: { key: HazardStatus; label: string }[] = [
-  { key: 'REPORTED', label: 'Reported' },
-  { key: 'TRIAGED', label: 'AI Triaged' },
-  { key: 'DISPATCHED', label: 'Dispatched' },
-  { key: 'RESOLVED', label: 'Resolved' },
+const STEPPER_STEPS: { key: HazardStatus; label: string; detail: string }[] = [
+  {
+    key: 'REPORTED',
+    label: 'Reported',
+    detail: 'Citizen field observation & GPS frame logged',
+  },
+  {
+    key: 'TRIAGED',
+    label: 'AI Triaged',
+    detail: 'Gemini 3.8 Vision severity & SLA graded',
+  },
+  {
+    key: 'DISPATCHED',
+    label: 'Dispatched',
+    detail: 'Assigned to field arborist crew queue',
+  },
+  {
+    key: 'RESOLVED',
+    label: 'Resolved',
+    detail: 'Verified proof-of-work anchored on-chain',
+  },
 ];
 
 const HAZARD_TYPES: { value: HazardType; label: string; hint: string }[] = [
@@ -112,19 +130,23 @@ export default function HazardsPage() {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([fetchHazards(), fetchTrees()]).then(([hazardList, treeList]) => {
-      if (!active) return;
-      setHazards(hazardList);
-      setTrees(treeList);
-      const params = new URLSearchParams(window.location.search);
-      const treeIdParam = params.get('treeId');
-      setSelectedTreeId(treeIdParam || treeList[0]?.id || '');
-      if (treeIdParam) {
-        setDrawerOpen(true);
+    void Promise.all([fetchHazards(), fetchTrees()]).then(
+      ([hazardList, treeList]) => {
+        if (!active) return;
+        setHazards(hazardList);
+        setTrees(treeList);
+        const params = new URLSearchParams(window.location.search);
+        const treeIdParam = params.get('treeId');
+        setSelectedTreeId(treeIdParam || treeList[0]?.id || '');
+        if (treeIdParam) {
+          setDrawerOpen(true);
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
-    return () => { active = false; };
+    );
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredHazards = useMemo(() => {
@@ -192,40 +214,61 @@ export default function HazardsPage() {
     return STEPPER_STEPS.findIndex((s) => s.key === status);
   };
 
-  const getSeverityBadge = (severity: HazardReport['ai_severity_grade']) => {
+  const getSeverityMeta = (
+    severity: HazardReport['ai_severity_grade']
+  ): {
+    label: string;
+    tone: 'critical' | 'warning' | 'healthy';
+    colorVar: string;
+    borderVar: string;
+  } => {
     switch (severity) {
       case 'CRITICAL_24H':
         return {
           label: 'CRITICAL • 24H SLA',
-          className: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
+          tone: 'critical',
+          colorVar: 'var(--status-critical-text)',
+          borderVar: 'var(--status-critical)',
         };
       case 'MEDIUM':
         return {
           label: 'MEDIUM • 72H SLA',
-          className: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
+          tone: 'warning',
+          colorVar: 'var(--status-warning)',
+          borderVar: 'var(--status-warning)',
         };
       case 'LOW':
       default:
         return {
           label: 'LOW • ROUTINE SLA',
-          className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
+          tone: 'healthy',
+          colorVar: 'var(--status-healthy)',
+          borderVar: 'var(--status-healthy)',
         };
     }
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-5 font-sans text-[var(--foreground)]">
       {/* Top Banner & Report CTA */}
-      <section className="rounded-2xl bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-900 border border-amber-500/30 p-4 shadow-lg">
+      <section
+        className="surface-panel p-4"
+        style={{
+          background:
+            'radial-gradient(ellipse at top right, var(--ambient), transparent 65%), var(--surface)',
+        }}
+      >
         <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 text-amber-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 text-[var(--status-warning)] text-xs font-medium uppercase tracking-wider">
               <ShieldAlert className="w-4 h-4" />
-              <span>Civic Hazard & SLA Feed</span>
+              <span>Civic Hazard &amp; SLA Feed</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-[var(--muted)] leading-relaxed">
               Every resident report is triaged by{' '}
-              <span className="text-white font-medium">Gemini Vision AI</span>{' '}
+              <span className="text-[var(--foreground)] font-medium">
+                Gemini Vision AI
+              </span>{' '}
               and bound to an automated contractor SLA countdown.
             </p>
           </div>
@@ -233,7 +276,7 @@ export default function HazardsPage() {
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-2.5 text-xs shadow-md transition-colors"
+            className="min-h-[44px] shrink-0 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--accent)] hover:bg-[var(--accent-soft)] text-[var(--accent-foreground)] font-medium px-4 py-2 text-xs transition-colors cursor-pointer"
           >
             <Camera className="w-4 h-4" />
             <span>Report Hazard</span>
@@ -257,10 +300,11 @@ export default function HazardsPage() {
               key={tab.key}
               type="button"
               onClick={() => setStatusFilter(tab.key)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+              aria-pressed={statusFilter === tab.key}
+              className={`min-h-[38px] shrink-0 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-medium border transition-colors cursor-pointer ${
                 statusFilter === tab.key
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-foreground)]'
+                  : 'bg-[var(--surface)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]'
               }`}
             >
               {tab.label}
@@ -271,9 +315,9 @@ export default function HazardsPage() {
         <button
           type="button"
           onClick={loadAll}
-          className="shrink-0 inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200"
+          className="min-h-[38px] px-2.5 rounded-[var(--radius-control)] shrink-0 inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] cursor-pointer"
         >
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Sync
         </button>
       </div>
@@ -284,27 +328,27 @@ export default function HazardsPage() {
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="rounded-2xl bg-slate-900 border border-slate-800 p-4 animate-pulse space-y-3"
+              className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] p-4 animate-pulse space-y-3"
             >
               <div className="flex justify-between">
-                <div className="h-4 w-24 bg-slate-800 rounded" />
-                <div className="h-4 w-28 bg-slate-800 rounded" />
+                <div className="h-4 w-24 bg-[var(--surface-raised)] rounded" />
+                <div className="h-4 w-28 bg-[var(--surface-raised)] rounded" />
               </div>
-              <div className="h-10 w-full bg-slate-800 rounded-xl" />
-              <div className="h-32 w-full bg-slate-800 rounded-xl" />
+              <div className="h-24 w-full bg-[var(--surface-raised)] rounded-[var(--radius-control)]" />
+              <div className="h-24 w-full bg-[var(--surface-raised)] rounded-[var(--radius-control)]" />
             </div>
           ))}
         </div>
       ) : filteredHazards.length === 0 ? (
-        <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-8 text-center space-y-3">
-          <div className="w-10 h-10 rounded-full bg-slate-800/80 flex items-center justify-center mx-auto text-slate-400">
+        <div className="rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)] p-8 text-center space-y-3">
+          <div className="w-11 h-11 rounded-full bg-[var(--surface-raised)] flex items-center justify-center mx-auto text-[var(--accent)]">
             <Filter className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-slate-200">
+            <p className="text-sm font-medium text-[var(--foreground)]">
               No Incidents in This Stage
             </p>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+            <p className="text-xs text-[var(--muted)] max-w-xs mx-auto leading-relaxed">
               There are currently no civic hazard reports matching the{' '}
               <strong>{statusFilter}</strong> status filter.
             </p>
@@ -313,14 +357,14 @@ export default function HazardsPage() {
             <button
               type="button"
               onClick={() => setStatusFilter('ALL')}
-              className="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200"
+              className="button button--secondary"
             >
               Show All Incidents
             </button>
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="inline-flex items-center gap-1 rounded-xl bg-amber-500/20 border border-amber-500/40 px-3 py-1.5 text-xs font-semibold text-amber-300"
+              className="button button--primary"
             >
               <Plus className="w-3.5 h-3.5" />
               New Report
@@ -328,29 +372,32 @@ export default function HazardsPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-4">
           {filteredHazards.map((hazard) => {
             const activeIdx = getStepIndex(hazard.status);
-            const severityBadge = getSeverityBadge(hazard.ai_severity_grade);
+            const severity = getSeverityMeta(hazard.ai_severity_grade);
 
             return (
               <article
                 key={hazard.id}
-                className="rounded-2xl bg-slate-900/95 border border-slate-800/90 p-4 space-y-3.5 shadow-md"
+                className="surface-panel p-4 space-y-4 transition-colors hover:border-[var(--control-border)]"
+                style={{
+                  borderLeft: `3px solid ${severity.borderVar}`,
+                }}
               >
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-800 text-emerald-400 border border-slate-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-medium px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--background)] text-[var(--accent)] border border-[var(--border)]">
                         {hazard.tree_id}
                       </span>
-                      <span className="text-xs font-semibold text-white">
+                      <span className="text-sm font-medium text-[var(--foreground)]">
                         {hazard.hazard_type.replace('_', ' ')}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-                      <Clock className="w-3 h-3 text-slate-500" />
+                    <p className="text-xs text-[var(--muted)] mt-1 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-[var(--accent)]" />
                       <span>
                         Incident #{hazard.id} •{' '}
                         {new Date(hazard.reported_at).toLocaleString('en-MY', {
@@ -363,89 +410,41 @@ export default function HazardsPage() {
                     </p>
                   </div>
 
-                  <span
-                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${severityBadge.className}`}
-                  >
-                    {severityBadge.label}
-                  </span>
+                  <StatusBadge tone={severity.tone}>
+                    <span style={{ color: severity.colorVar }} className="font-mono font-medium">
+                      {severity.label}
+                    </span>
+                  </StatusBadge>
                 </div>
 
-                {/* 4-Stage Status Stepper: Reported -> AI Triaged -> Dispatched -> Resolved */}
-                <div
-                  aria-label="Incident Status Stepper"
-                  className="rounded-xl bg-slate-950/90 border border-slate-800/80 p-3"
-                >
-                  <div className="grid grid-cols-4 gap-1 relative">
-                    {STEPPER_STEPS.map((step, idx) => {
-                      const isCompleted = idx <= activeIdx;
-                      const isCurrent = idx === activeIdx;
-                      return (
-                        <div
-                          key={step.key}
-                          className="flex flex-col items-center text-center"
-                        >
-                          <div className="flex items-center w-full justify-center mb-1.5">
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${
-                                isCurrent
-                                  ? 'bg-emerald-500 text-slate-950 border-emerald-300 ring-4 ring-emerald-500/20'
-                                  : isCompleted
-                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                                  : 'bg-slate-900 text-slate-500 border-slate-800'
-                              }`}
-                            >
-                              {isCompleted ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                idx + 1
-                              )}
-                            </div>
-                          </div>
-                          <span
-                            className={`text-[10px] font-semibold leading-tight ${
-                              isCurrent
-                                ? 'text-emerald-300'
-                                : isCompleted
-                                ? 'text-slate-300'
-                                : 'text-slate-500'
-                            }`}
-                          >
-                            {step.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Evidence Photo & Description */}
-                <div className="flex gap-3 items-start">
+                {/* Evidence Photo & Gemini AI Triage Summary */}
+                <div className="flex gap-3.5 items-start">
                   <button
                     type="button"
                     onClick={() => setPreviewHazard(hazard)}
-                    className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-700 shrink-0 group bg-slate-950"
+                    className="relative w-24 h-24 rounded-[var(--radius-control)] overflow-hidden border border-[var(--control-border)] shrink-0 group bg-[var(--background)] cursor-pointer"
                   >
                     <img
                       src={hazard.evidence_photo_url}
                       alt={`Hazard evidence for ${hazard.tree_id}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
-                    <span className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] font-semibold text-white transition-opacity">
+                    <span className="absolute inset-0 bg-[var(--scrim)] opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-medium text-[var(--foreground)] transition-opacity">
                       <Eye className="w-4 h-4" />
                     </span>
                   </button>
 
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <p className="text-xs text-slate-200 leading-relaxed line-clamp-3">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-xs text-[var(--foreground)] leading-relaxed line-clamp-3">
                       {hazard.description}
                     </p>
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-950 border border-slate-800 px-2 py-0.5 text-[10px] font-mono text-cyan-300">
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--background)] border border-[var(--border)] px-2.5 py-0.5 text-[11px] font-mono text-[var(--verification)]">
                         <Cpu className="w-3 h-3" />
-                        AI Confidence: {Math.round(hazard.ai_confidence * 100)}%
+                        Gemini AI Confidence: {Math.round(hazard.ai_confidence * 100)}%
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] text-slate-400">
-                        <MapPin className="w-3 h-3 text-slate-500" />
+                      <span className="inline-flex items-center gap-1 text-xs text-[var(--muted)] font-mono">
+                        <MapPin className="w-3 h-3 text-[var(--accent)]" />
                         {Number(hazard.latitude).toFixed(4)}°N,{' '}
                         {Number(hazard.longitude).toFixed(4)}°E
                       </span>
@@ -453,17 +452,105 @@ export default function HazardsPage() {
                   </div>
                 </div>
 
+                {/* Organic Minimalist Vertical Branch Progression Timeline */}
+                <div
+                  aria-label="Incident Status Stepper"
+                  className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2.5"
+                >
+                  <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-[var(--muted)]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <GitBranch className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      Living Resolution Branch
+                    </span>
+                    <span className="text-[var(--accent)]">
+                      Stage {activeIdx + 1} of {STEPPER_STEPS.length}
+                    </span>
+                  </div>
+
+                  <ol className="relative ml-2 border-l border-[var(--control-border)] space-y-2.5 pl-4 py-0.5 list-none">
+                    {STEPPER_STEPS.map((step, idx) => {
+                      const isCompleted = idx <= activeIdx;
+                      const isCurrent = idx === activeIdx;
+
+                      return (
+                        <li
+                          key={step.key}
+                          className="relative flex items-start justify-between gap-2"
+                        >
+                          {/* Branch Node Marker */}
+                          <span
+                            className="absolute -left-[21px] top-0.5 w-3 h-3 rounded-full border flex items-center justify-center transition-all"
+                            style={
+                              isCurrent
+                                ? {
+                                    backgroundColor: 'var(--accent)',
+                                    borderColor: 'var(--accent-soft)',
+                                    boxShadow: '0 0 0 3px var(--ambient)',
+                                  }
+                                : isCompleted
+                                ? {
+                                    backgroundColor: 'var(--surface-raised)',
+                                    borderColor: 'var(--accent)',
+                                  }
+                                : {
+                                    backgroundColor: 'var(--background)',
+                                    borderColor: 'var(--border)',
+                                  }
+                            }
+                            aria-hidden="true"
+                          />
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="text-xs font-medium"
+                                style={{
+                                  color: isCurrent
+                                    ? 'var(--accent)'
+                                    : isCompleted
+                                    ? 'var(--foreground)'
+                                    : 'var(--muted)',
+                                }}
+                              >
+                                {step.label}
+                              </span>
+                              {isCurrent && (
+                                <span className="text-[10px] font-mono px-2 py-0.2 rounded-[var(--radius-pill)] bg-[var(--surface-raised)] text-[var(--accent-soft)] border border-[var(--border)]">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[var(--muted)] leading-snug">
+                              {step.detail}
+                            </p>
+                          </div>
+
+                          <span className="text-[11px] font-mono text-[var(--muted)] shrink-0">
+                            {isCompleted ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                            ) : (
+                              `0${idx + 1}`
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+
                 {/* Recommended SLA Action Footer */}
                 {hazard.recommended_sla_action && (
-                  <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 px-3 py-2 flex items-center justify-between gap-2 text-[11px]">
-                    <span className="text-slate-400 truncate">
-                      <strong className="text-slate-200">SLA Prescription:</strong>{' '}
+                  <div className="rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs">
+                    <span className="text-[var(--muted)] truncate">
+                      <strong className="text-[var(--foreground)] font-medium">
+                        SLA Prescription:
+                      </strong>{' '}
                       {hazard.recommended_sla_action}
                     </span>
                     <button
                       type="button"
                       onClick={() => setPreviewHazard(hazard)}
-                      className="shrink-0 text-emerald-400 hover:text-emerald-300 font-medium"
+                      className="shrink-0 text-[var(--accent)] hover:text-[var(--foreground)] font-medium cursor-pointer"
                     >
                       Inspect
                     </button>
@@ -481,15 +568,15 @@ export default function HazardsPage() {
           role="dialog"
           aria-modal="true"
           aria-label="Hazard Evidence Inspection"
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-[var(--scrim)] backdrop-blur-sm flex items-center justify-center p-4"
         >
-          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <div className="w-full max-w-md rounded-[var(--radius-dialog)] bg-[var(--surface)] border border-[var(--control-border)] overflow-hidden shadow-[var(--shadow-panel)]">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
               <div>
-                <span className="font-mono text-xs font-bold text-emerald-400">
+                <span className="font-mono text-xs font-medium text-[var(--accent)]">
                   {previewHazard.tree_id}
                 </span>
-                <h3 className="text-sm font-bold text-white">
+                <h3 className="text-sm font-medium text-[var(--foreground)]">
                   Incident #{previewHazard.id} •{' '}
                   {previewHazard.hazard_type.replace('_', ' ')}
                 </h3>
@@ -497,25 +584,26 @@ export default function HazardsPage() {
               <button
                 type="button"
                 onClick={() => setPreviewHazard(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="w-10 h-10 grid place-items-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)]"
+                aria-label="Close inspection modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="relative h-64 bg-slate-950">
+            <div className="relative h-64 bg-[var(--background)]">
               <img
                 src={previewHazard.evidence_photo_url}
                 alt={`Evidence for ${previewHazard.tree_id}`}
                 className="w-full h-full object-cover"
               />
-              <span className="absolute bottom-3 left-3 rounded-lg bg-slate-950/85 border border-slate-700 px-2.5 py-1 text-[10px] font-mono text-emerald-300">
+              <span className="absolute bottom-3 left-3 rounded-[var(--radius-pill)] bg-[var(--background)]/90 border border-[var(--border)] px-3 py-1 text-xs font-mono text-[var(--accent-soft)]">
                 Reporter: {previewHazard.reporter_id}
               </span>
             </div>
 
             <div className="p-4 space-y-3">
-              <p className="text-xs text-slate-200 leading-relaxed">
+              <p className="text-xs text-[var(--foreground)] leading-relaxed">
                 {previewHazard.description}
               </p>
               {previewHazard.detected_issues &&
@@ -524,7 +612,7 @@ export default function HazardsPage() {
                     {previewHazard.detected_issues.map((issue) => (
                       <span
                         key={issue}
-                        className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-medium text-amber-300"
+                        className="rounded-[var(--radius-pill)] bg-[var(--surface-raised)] border border-[var(--border)] px-2.5 py-0.5 text-xs font-medium text-[var(--status-warning)]"
                       >
                         Detected: {issue}
                       </span>
@@ -542,42 +630,43 @@ export default function HazardsPage() {
           role="dialog"
           aria-modal="true"
           aria-label="Report Tree Hazard Drawer"
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-[var(--scrim)] backdrop-blur-sm flex items-end justify-center"
         >
-          <div className="w-full max-w-md rounded-t-3xl bg-slate-900 border-t border-x border-slate-800 p-4 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+          <div className="w-full max-w-md rounded-t-[var(--radius-dialog)] bg-[var(--surface)] border-t border-x border-[var(--control-border)] p-5 max-h-[90vh] overflow-y-auto space-y-4 shadow-[var(--shadow-panel)]">
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--status-warning)]">
                   <Camera className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-white">
+                  <h2 className="text-sm font-medium text-[var(--foreground)]">
                     Report Civic Tree Hazard
                   </h2>
-                  <p className="text-[11px] text-slate-400">
-                    Geofenced Photo Capture & Gemini Vision Triage
+                  <p className="text-xs text-[var(--muted)]">
+                    Geofenced Photo Capture &amp; Gemini Vision Triage
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="w-10 h-10 grid place-items-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)]"
+                aria-label="Close drawer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitHazard} className="space-y-3.5">
+            <form onSubmit={handleSubmitHazard} className="space-y-4">
               {/* Select Tree ID */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
                   Target Tree Asset ID
                 </label>
                 <select
                   value={selectedTreeId}
                   onChange={(e) => setSelectedTreeId(e.target.value)}
-                  className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500"
+                  className="w-full min-h-[44px] rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--control-border)] px-3 py-2 text-xs text-[var(--foreground)]"
                 >
                   {trees.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -589,7 +678,7 @@ export default function HazardsPage() {
 
               {/* Select Hazard Type */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
                   Observed Hazard Category
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -604,14 +693,16 @@ export default function HazardsPage() {
                         }
                         setTriagePreview(null);
                       }}
-                      className={`rounded-xl p-2.5 text-left border transition-all ${
+                      className={`rounded-[var(--radius-control)] p-3 text-left border transition-all cursor-pointer ${
                         hazardType === type.value
-                          ? 'bg-amber-500/15 border-amber-500/50 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                          ? 'bg-[var(--surface-raised)] border-[var(--accent)] text-[var(--foreground)]'
+                          : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]'
                       }`}
                     >
-                      <div className="text-xs font-semibold">{type.label}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                      <div className="text-xs font-medium text-[var(--foreground)]">
+                        {type.label}
+                      </div>
+                      <div className="text-[11px] text-[var(--muted)] mt-0.5 line-clamp-1">
                         {type.hint}
                       </div>
                     </button>
@@ -622,10 +713,10 @@ export default function HazardsPage() {
               {/* Camera Capture / Upload Input */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300">
+                  <label className="text-xs font-medium text-[var(--foreground)]">
                     Photographic Evidence (Required)
                   </label>
-                  <span className="text-[10px] font-mono text-slate-400 truncate max-w-[170px]">
+                  <span className="text-[11px] font-mono text-[var(--muted)] truncate max-w-[170px]">
                     {photoSourceLabel}
                   </span>
                 </div>
@@ -639,7 +730,7 @@ export default function HazardsPage() {
                   className="hidden"
                 />
 
-                <div className="relative h-40 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+                <div className="relative h-44 rounded-[var(--radius-panel)] overflow-hidden border border-[var(--control-border)] bg-[var(--background)]">
                   <img
                     src={photoDataUrl}
                     alt="Selected hazard evidence"
@@ -649,9 +740,9 @@ export default function HazardsPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950/90 hover:bg-slate-900 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
+                      className="min-h-[40px] inline-flex items-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--background)]/95 hover:bg-[var(--surface-raised)] border border-[var(--control-border)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] shadow-[var(--shadow-panel)] cursor-pointer"
                     >
-                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                      <Upload className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Capture / Upload Photo
                     </button>
 
@@ -659,7 +750,7 @@ export default function HazardsPage() {
                       type="button"
                       onClick={handleRunTriagePreview}
                       disabled={triaging}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 text-xs font-bold shadow-lg disabled:opacity-50"
+                      className="min-h-[40px] inline-flex items-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--accent)] hover:bg-[var(--accent-soft)] text-[var(--accent-foreground)] px-3.5 py-1.5 text-xs font-medium shadow-[var(--shadow-panel)] disabled:opacity-50 cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       {triaging ? 'Analyzing...' : 'Run AI Triage'}
@@ -670,26 +761,49 @@ export default function HazardsPage() {
 
               {/* Live AI Vision Triage Output Card */}
               {triagePreview && (
-                <div className="rounded-xl bg-slate-950 border border-emerald-500/40 p-3 space-y-2">
+                <div className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--control-border)] p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                    <span className="text-xs font-medium text-[var(--accent)] flex items-center gap-1.5">
                       <Cpu className="w-3.5 h-3.5" />
                       Gemini 3.8 Flash Vision Assessment
                     </span>
-                    <span className="text-[10px] font-mono text-slate-300">
+                    <span className="text-xs font-mono text-[var(--muted)]">
                       Confidence: {Math.round(triagePreview.confidence * 100)}%
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
-                      {triagePreview.severity_grade}
-                    </span>
-                    <span className="text-slate-300 text-[11px]">
-                      Canopy Score: <strong>{triagePreview.health_score}/100</strong>
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <StatusBadge
+                      tone={
+                        triagePreview.severity_grade === 'CRITICAL_24H'
+                          ? 'critical'
+                          : triagePreview.severity_grade === 'MEDIUM'
+                          ? 'warning'
+                          : 'healthy'
+                      }
+                    >
+                      <span
+                        className="font-mono font-medium"
+                        style={{
+                          color:
+                            triagePreview.severity_grade === 'CRITICAL_24H'
+                              ? 'var(--status-critical-text)'
+                              : triagePreview.severity_grade === 'MEDIUM'
+                              ? 'var(--status-warning)'
+                              : 'var(--status-healthy)',
+                        }}
+                      >
+                        {triagePreview.severity_grade}
+                      </span>
+                    </StatusBadge>
+                    <span className="text-[var(--foreground)] text-xs">
+                      Canopy Score:{' '}
+                      <strong className="font-mono">{triagePreview.health_score}/100</strong>
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-300">
-                    <strong>Recommended SLA:</strong>{' '}
+                  <p className="text-xs text-[var(--muted)] leading-relaxed">
+                    <strong className="text-[var(--foreground)] font-medium">
+                      Recommended SLA:
+                    </strong>{' '}
                     {triagePreview.recommended_sla_action}
                   </p>
                 </div>
@@ -697,30 +811,30 @@ export default function HazardsPage() {
 
               {/* Field Notes */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Location & Observation Notes
+                <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                  Location &amp; Observation Notes
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe branch condition, walkway obstruction, or root uplift..."
-                  className="w-full rounded-xl bg-slate-950 border border-slate-800 p-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                  className="w-full rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--control-border)] p-3 text-xs text-[var(--foreground)] placeholder:text-[var(--muted)]"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="w-1/3 rounded-xl bg-slate-800 hover:bg-slate-700 py-2.5 text-xs font-semibold text-slate-300"
+                  className="button button--secondary w-1/3"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-2/3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 text-xs shadow-lg disabled:opacity-50"
+                  className="button button--primary w-2/3"
                 >
                   {submitting
                     ? 'Submitting & Triaging...'
