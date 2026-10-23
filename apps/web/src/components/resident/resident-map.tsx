@@ -91,7 +91,13 @@ export function ResidentMap({ trees, onList, selectedTreeId, onSelect, showPrevi
         instance.fitBounds(bounds,{ padding: 72, maxZoom: 16, duration: 0 });
       }
     });
-    return () => { disposed = true; markers.forEach(marker => marker.remove()); roots.forEach(root => root.unmount()); };
+    return () => {
+      disposed = true;
+      markers.forEach((marker) => marker.remove());
+      setTimeout(() => {
+        roots.forEach((root) => root.unmount());
+      }, 0);
+    };
   }, [trees, status, activeId, onSelect]);
 
   const locate = () => {

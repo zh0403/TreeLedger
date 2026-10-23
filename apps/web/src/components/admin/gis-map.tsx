@@ -351,7 +351,9 @@ export function GISMap({
     return () => {
       disposed = true;
       markers.forEach((marker) => marker.remove());
-      roots.forEach((root) => root.unmount());
+      setTimeout(() => {
+        roots.forEach((root) => root.unmount());
+      }, 0);
     };
   }, [records, state.status, showTrees, showHealth, opacity, selectedId, onSelect]);
 

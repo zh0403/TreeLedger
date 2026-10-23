@@ -567,7 +567,9 @@ export function TownshipTransparencyExplorer({
     return () => {
       disposed = true;
       markers.forEach((m) => m.remove());
-      roots.forEach((r) => r.unmount());
+      setTimeout(() => {
+        roots.forEach((r) => r.unmount());
+      }, 0);
     };
   }, [filteredTrees, status, selectedTree?.id]);
 

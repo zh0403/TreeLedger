@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -21,40 +20,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import TownshipTransparencyExplorer from "@/components/home/TownshipTransparencyExplorer";
 
 export default function Home() {
-  const [deviceType, setDeviceType] = useState<"mobile" | "desktop">("desktop");
-
-  useEffect(() => {
-    const runDetection = () => {
-      if (typeof window === "undefined") return;
-
-      const ua = (navigator.userAgent || navigator.vendor || "").toLowerCase();
-      const isMobileUA =
-        /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|touch|silk|fennec|windows phone/i.test(
-          ua
-        );
-      const isSmallScreen =
-        window.innerWidth <= 820 || window.screen.width <= 820;
-      const hasTouch =
-        "ontouchstart" in window ||
-        navigator.maxTouchPoints > 0 ||
-        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-
-      if (isMobileUA || (hasTouch && isSmallScreen) || isSmallScreen) {
-        setDeviceType("mobile");
-      } else {
-        setDeviceType("desktop");
-      }
-    };
-
-    const frame = requestAnimationFrame(runDetection);
-    window.addEventListener("resize", runDetection);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", runDetection);
-    };
-  }, []);
-
-  const targetPath = deviceType === "mobile" ? "/app/explore" : "/admin";
+  const targetPath = "/app";
 
   return (
     <div className="landing">
