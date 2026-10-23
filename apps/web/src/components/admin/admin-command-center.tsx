@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -11,13 +10,14 @@ import {
   Layers3,
   Leaf,
   Map as MapIcon,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelRightOpen,
   ShieldCheck,
   Table2,
   Trees,
   TriangleAlert,
   Wrench,
-  X,
 } from "lucide-react";
 import {
   workspaceConfig,
@@ -71,7 +71,6 @@ function buildElmina40Registry(seedTrees: Tree[]): AdminTreeRecord[] {
     byId.set(t.id, toAdminTreeRecord(t));
   }
 
-  // Ensure a critical specimen is included so operators can inspect critical (!) TreePine badges
   const supplementarySpecs: Array<{
     id: string;
     species: string;
@@ -461,6 +460,10 @@ export function AdminCommandCenter({
   trees?: readonly AdminTreeRecord[] | null;
 }) {
   const router = useRouter();
+  const [activeView, setActiveView] = useState<WorkspaceView>(view);
+  const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(
+    view !== "overview" && view !== "map"
+  );
   const [treeList, setTreeList] = useState<readonly AdminTreeRecord[] | null>(
     trees && trees.length >= 40 ? trees : DEFAULT_40_TREES
   );
@@ -492,7 +495,10 @@ export function AdminCommandCenter({
   const connectionButton = useRef<HTMLButtonElement>(null);
   const inspectorButton = useRef<HTMLButtonElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
-  const operationalView = view !== "overview" && view !== "map";
+
+  const operationalView = activeView !== "overview" && activeView !== "map";
+  const isLeftDrawerVisible =
+    tool !== null || (operationalView && leftPanelOpen);
 
   useEffect(() => {
     let active = true;
@@ -538,6 +544,40 @@ export function AdminCommandCenter({
     return () => cancelAnimationFrame(frame);
   }, [tool]);
 
+  // Switch active view in-place without reloading the page or Mapbox canvas
+  const handleSelectRailView = useCallback(
+    (targetView: WorkspaceView) => {
+      setDisplayMode("map");
+      if (targetView === "overview" || targetView === "map") {
+        setActiveView(targetView);
+        setTool(null);
+        setLeftPanelOpen(false);
+      } else if (activeView === targetView && tool === null) {
+        // Clicking the already-active tab toggles the left side panel open/closed
+        setLeftPanelOpen((open) => !open);
+      } else {
+        setActiveView(targetView);
+        setTool(null);
+        setLeftPanelOpen(true);
+        if (
+          typeof window !== "undefined" &&
+          matchMedia("(max-width:759px)").matches
+        ) {
+          setInspectorOpen(false);
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        window.history.replaceState(
+          null,
+          "",
+          workspaceHref("admin", targetView)
+        );
+      }
+    },
+    [activeView, tool]
+  );
+
   const selectTree = useCallback((tree: AdminTreeRecord) => {
     setSelected(tree);
     setInspectorOpen(true);
@@ -550,13 +590,13 @@ export function AdminCommandCenter({
       preventScroll: true,
     });
   };
-  const navigate = () => {
-    setTool(null);
-  };
+
   const openLayers = () => {
+    setDisplayMode("map");
     setTool((current) => (current === "layers" ? null : "layers"));
     if (matchMedia("(max-width:759px)").matches) setInspectorOpen(false);
   };
+
   const openInspector = () => {
     setInspectorOpen(true);
     if (matchMedia("(max-width:759px)").matches) setTool(null);
@@ -578,7 +618,9 @@ export function AdminCommandCenter({
       ref={workspaceRef}
       className="gis"
       data-inspector={inspectorOpen ? "open" : "closed"}
-      data-tool={tool ?? (operationalView ? "operation" : "none")}
+      data-tool={
+        tool ?? (operationalView && leftPanelOpen ? "operation" : "none")
+      }
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
         if (displayMode === "table") {
@@ -587,6 +629,9 @@ export function AdminCommandCenter({
         } else if (tool) {
           event.preventDefault();
           closeTool();
+        } else if (operationalView && leftPanelOpen) {
+          event.preventDefault();
+          setLeftPanelOpen(false);
         } else if (inspectorOpen) {
           event.preventDefault();
           setInspectorOpen(false);
@@ -678,6 +723,7 @@ export function AdminCommandCenter({
             aria-label="View data connection details"
             aria-expanded={tool === "connection"}
             onClick={() => {
+              setDisplayMode("map");
               setTool((current) =>
                 current === "connection" ? null : "connection"
               );
@@ -715,17 +761,31 @@ export function AdminCommandCenter({
       <Navigation className="gis-rail" label="Admin GIS tools">
         {workspaceConfig.admin.navigation.map((item, index) => {
           const Icon = navIcons[item.view];
-          const isActive = view === item.view && tool === null;
+          const isItemOperational =
+            item.view !== "overview" && item.view !== "map";
+          const isActive =
+            activeView === item.view &&
+            tool === null &&
+            (!isItemOperational || leftPanelOpen);
           const isLayersActive = tool === "layers";
           return (
             <div className="gis-tool-group" key={item.view}>
-              <NavigationLink
-                href={workspaceHref("admin", item.view)}
-                onClick={navigate}
+              <button
+                type="button"
+                onClick={() => handleSelectRailView(item.view)}
                 className="gis-tool"
                 aria-label={item.label}
-                title={item.label}
+                title={
+                  isItemOperational && activeView === item.view && leftPanelOpen
+                    ? `${item.label} (click to collapse panel)`
+                    : item.label
+                }
                 aria-current={isActive ? "page" : undefined}
+                aria-expanded={
+                  isItemOperational
+                    ? activeView === item.view && leftPanelOpen && tool === null
+                    : undefined
+                }
                 style={isActive ? activePillStyle : undefined}
               >
                 <Icon
@@ -734,7 +794,7 @@ export function AdminCommandCenter({
                   aria-hidden="true"
                 />
                 <span>{item.label}</span>
-              </NavigationLink>
+              </button>
               {index === 1 && (
                 <button
                   ref={layerButton}
@@ -794,7 +854,8 @@ export function AdminCommandCenter({
               position: "absolute",
               inset: "0 0 33px 0",
               zIndex: 6,
-              background: "color-mix(in srgb, var(--gis-base) 96%, transparent)",
+              background:
+                "color-mix(in srgb, var(--gis-base) 96%, transparent)",
               backdropFilter: "blur(16px)",
               padding: "24px",
               overflowY: "auto",
@@ -842,7 +903,10 @@ export function AdminCommandCenter({
                   [
                     ["trees", `Tree Registry (${treeList?.length ?? 40})`],
                     ["hazards", `Hazard Reports (${hazards.length})`],
-                    ["maintenance", `Maintenance Proofs (${maintenance.length})`],
+                    [
+                      "maintenance",
+                      `Maintenance Proofs (${maintenance.length})`,
+                    ],
                   ] as const
                 ).map(([tabKey, label]) => (
                   <button
@@ -898,8 +962,12 @@ export function AdminCommandCenter({
                       <th style={{ padding: "12px 14px" }}>Botanical Species</th>
                       <th style={{ padding: "12px 14px" }}>Condition</th>
                       <th style={{ padding: "12px 14px" }}>Health Score</th>
-                      <th style={{ padding: "12px 14px" }}>Responsible Contractor</th>
-                      <th style={{ padding: "12px 14px" }}>Coordinates (WGS84)</th>
+                      <th style={{ padding: "12px 14px" }}>
+                        Responsible Contractor
+                      </th>
+                      <th style={{ padding: "12px 14px" }}>
+                        Coordinates (WGS84)
+                      </th>
                       <th style={{ padding: "12px 14px" }}>Action</th>
                     </tr>
                   </thead>
@@ -952,7 +1020,9 @@ export function AdminCommandCenter({
                           }}
                         >
                           {t.coordinates
-                            ? `${t.coordinates[1].toFixed(5)}° N, ${t.coordinates[0].toFixed(5)}° E`
+                            ? `${t.coordinates[1].toFixed(
+                                5
+                              )}° N, ${t.coordinates[0].toFixed(5)}° E`
                             : "—"}
                         </td>
                         <td style={{ padding: "10px 14px" }}>
@@ -1005,9 +1075,13 @@ export function AdminCommandCenter({
                       <th style={{ padding: "12px 14px" }}>Report</th>
                       <th style={{ padding: "12px 14px" }}>Tree ID</th>
                       <th style={{ padding: "12px 14px" }}>Hazard Type</th>
-                      <th style={{ padding: "12px 14px" }}>Gemini 3.8 AI Grade</th>
+                      <th style={{ padding: "12px 14px" }}>
+                        Gemini 3.8 AI Grade
+                      </th>
                       <th style={{ padding: "12px 14px" }}>Status</th>
-                      <th style={{ padding: "12px 14px" }}>Recommended SLA Action</th>
+                      <th style={{ padding: "12px 14px" }}>
+                        Recommended SLA Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1072,7 +1146,9 @@ export function AdminCommandCenter({
                       <th style={{ padding: "12px 14px" }}>Tree ID</th>
                       <th style={{ padding: "12px 14px" }}>Action</th>
                       <th style={{ padding: "12px 14px" }}>Contractor</th>
-                      <th style={{ padding: "12px 14px" }}>Arbitrum Sepolia Tx Hash</th>
+                      <th style={{ padding: "12px 14px" }}>
+                        Arbitrum Sepolia Tx Hash
+                      </th>
                       <th style={{ padding: "12px 14px" }}>Completed</th>
                     </tr>
                   </thead>
@@ -1119,14 +1195,52 @@ export function AdminCommandCenter({
           </section>
         ) : (
           <>
-            <div className="gis-view-heading">
+            {/* Top-left view heading shifts cleanly when the left side panel is open */}
+            <div
+              className="gis-view-heading"
+              style={{
+                left: isLeftDrawerVisible ? "372px" : "20px",
+                transition: "left 200ms ease",
+              }}
+            >
               <div>
                 <Crosshair size={14} aria-hidden="true" />
                 <span>Forest operations</span>
               </div>
-              <h1>{adminViewLabels[view]}</h1>
+              <h1>{adminViewLabels[activeView]}</h1>
               <p>City of Elmina / Active municipal forestry</p>
             </div>
+
+            {/* Re-open Left Side Panel button when an operational tab is collapsed */}
+            {operationalView && !leftPanelOpen && tool === null && (
+              <button
+                type="button"
+                onClick={() => setLeftPanelOpen(true)}
+                aria-label={`Open ${adminViewLabels[activeView]} side panel`}
+                style={{
+                  position: "absolute",
+                  top: "98px",
+                  left: "20px",
+                  zIndex: 4,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  minHeight: "42px",
+                  padding: "0 14px",
+                  borderRadius: "var(--radius-small)",
+                  border: "1px solid var(--gis-border)",
+                  background: "var(--gis-panel)",
+                  color: "var(--gis-accent)",
+                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.35)",
+                  fontSize: "11px",
+                  fontWeight: 500,
+                }}
+              >
+                <PanelLeftOpen size={16} aria-hidden="true" />
+                <span>Open {adminViewLabels[activeView]}</span>
+              </button>
+            )}
+
             {!inspectorOpen && (
               <button
                 type="button"
@@ -1140,6 +1254,7 @@ export function AdminCommandCenter({
                 <span>Intelligence</span>
               </button>
             )}
+
             {tool === "layers" ? (
               <LayerPanel
                 trees={treeList}
@@ -1156,29 +1271,41 @@ export function AdminCommandCenter({
               />
             ) : tool === "connection" ? (
               <ConnectionPanel mapState={mapState} onClose={closeTool} />
-            ) : operationalView ? (
+            ) : operationalView && leftPanelOpen ? (
               <aside
                 className="gis-tool-panel gis-panel"
                 aria-labelledby="operation-title"
+                style={{
+                  top: "18px",
+                  left: "18px",
+                  width: "340px",
+                  maxHeight: "calc(100% - 68px)",
+                }}
               >
                 <header className="gis-panel-header">
                   <div>
-                    <h2 id="operation-title">{adminViewLabels[view]}</h2>
+                    <h2 id="operation-title">{adminViewLabels[activeView]}</h2>
                   </div>
-                  <Link href="/admin/map" aria-label="Close operational panel">
-                    <X size={17} aria-hidden="true" />
-                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setLeftPanelOpen(false)}
+                    aria-label="Collapse operational side panel"
+                    title="Collapse side panel"
+                  >
+                    <PanelLeftClose size={17} aria-hidden="true" />
+                  </button>
                 </header>
                 <div className="gis-panel-scroll">
                   <OperationPanel
-                    key={view}
-                    view={view}
+                    key={activeView}
+                    view={activeView}
                     trees={treeList}
                     onSelect={selectTree}
                   />
                 </div>
               </aside>
             ) : null}
+
             {inspectorOpen && (
               <IntelligencePanel
                 trees={treeList}
@@ -1188,9 +1315,11 @@ export function AdminCommandCenter({
                   setInspectorOpen(false);
                   requestAnimationFrame(() => inspectorButton.current?.focus());
                 }}
+                onNavigateView={handleSelectRailView}
               />
             )}
-            {!operationalView && tool === null && (
+
+            {!isLeftDrawerVisible && (
               <div className="gis-map-context">
                 <Trees
                   size={18}
@@ -1211,9 +1340,14 @@ export function AdminCommandCenter({
                 </div>
               </div>
             )}
+
             <div
               className="gis-legend"
               aria-label="Tree status reference, not current observations"
+              style={{
+                left: isLeftDrawerVisible ? "372px" : "20px",
+                transition: "left 200ms ease",
+              }}
             >
               <span>TreePine badges</span>
               <span>

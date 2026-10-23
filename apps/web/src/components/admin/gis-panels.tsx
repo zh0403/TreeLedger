@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -9,6 +8,7 @@ import {
   Fingerprint,
   Layers3,
   Leaf,
+  PanelLeftClose,
   PanelRightClose,
   Search,
   ShieldCheck,
@@ -16,7 +16,6 @@ import {
   Trees,
   Unplug,
   Wrench,
-  X,
 } from "lucide-react";
 import type { WorkspaceView } from "../workspaces/config";
 import {
@@ -148,11 +147,13 @@ export function IntelligencePanel({
   selected,
   onClear,
   onClose,
+  onNavigateView,
 }: {
   trees: readonly AdminTreeRecord[] | null;
   selected: AdminTreeRecord | null;
   onClear: () => void;
   onClose: () => void;
+  onNavigateView?: (view: WorkspaceView) => void;
 }) {
   const evidence = selected && evidenceLink(selected);
   const avgHealth = useMemo(() => {
@@ -274,10 +275,15 @@ export function IntelligencePanel({
                 <ArrowUpRight size={14} aria-hidden="true" />
               </a>
             )}
-            <Link className="gis-action-link" href="/admin/maintenance">
-              Open maintenance workspace{" "}
+            <button
+              type="button"
+              className="gis-action-link"
+              style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
+              onClick={() => onNavigateView?.("maintenance")}
+            >
+              <span>Open maintenance workspace</span>
               <ArrowUpRight size={14} aria-hidden="true" />
-            </Link>
+            </button>
           </>
         ) : (
           <>
@@ -335,10 +341,15 @@ export function IntelligencePanel({
               </div>
               <Metric label="Active citizen hazards" value="3 open (2 critical)" />
               <Metric label="Verified Arbitrum proofs" value="3 anchored" />
-              <Link className="gis-action-link" href="/admin/maintenance">
-                View maintenance proofs{" "}
+              <button
+                type="button"
+                className="gis-action-link"
+                style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
+                onClick={() => onNavigateView?.("maintenance")}
+              >
+                <span>View maintenance proofs</span>
                 <ArrowUpRight size={13} aria-hidden="true" />
-              </Link>
+              </button>
             </section>
             <section className="gis-intelligence-section">
               <div className="gis-section-title">
@@ -347,10 +358,15 @@ export function IntelligencePanel({
               </div>
               <Metric label="Township compliance rate" value="94.7%" />
               <Metric label="Active 10% SLA deductions" value="1 contractor" />
-              <Link className="gis-action-link" href="/admin/sla">
-                Inspect contractor SLAs{" "}
+              <button
+                type="button"
+                className="gis-action-link"
+                style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
+                onClick={() => onNavigateView?.("sla")}
+              >
+                <span>Inspect contractor SLAs</span>
                 <ArrowUpRight size={13} aria-hidden="true" />
-              </Link>
+              </button>
             </section>
             <section className="gis-intelligence-section">
               <div className="gis-section-title">
@@ -359,10 +375,15 @@ export function IntelligencePanel({
               </div>
               <Metric label="Annual CO₂ sequestration" value="1,142 kg/yr" />
               <Metric label="Dominant species" value="Hopea odorata (30%)" />
-              <Link className="gis-action-link" href="/admin/insights">
-                View environmental report{" "}
+              <button
+                type="button"
+                className="gis-action-link"
+                style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
+                onClick={() => onNavigateView?.("insights")}
+              >
+                <span>View environmental report</span>
                 <ArrowUpRight size={13} aria-hidden="true" />
-              </Link>
+              </button>
             </section>
           </>
         )}
@@ -414,14 +435,25 @@ export function LayerPanel({
       className="gis-tool-panel gis-panel"
       aria-labelledby="layers-title"
       id="gis-layers"
+      style={{
+        top: "18px",
+        left: "18px",
+        width: "340px",
+        maxHeight: "calc(100% - 68px)",
+      }}
     >
       <header className="gis-panel-header">
         <div>
           <Layers3 size={17} aria-hidden="true" />
           <h2 id="layers-title">Map layers</h2>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close map layers">
-          <X size={17} aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Collapse map layers side panel"
+          title="Collapse side panel"
+        >
+          <PanelLeftClose size={17} aria-hidden="true" />
         </button>
       </header>
       <div className="gis-panel-scroll">
@@ -859,7 +891,9 @@ export function OperationPanel({
                   style={{
                     padding: "12px",
                     border: `1px solid ${
-                      isCritical ? "rgba(227, 107, 103, 0.45)" : "var(--gis-border)"
+                      isCritical
+                        ? "rgba(227, 107, 103, 0.45)"
+                        : "var(--gis-border)"
                     }`,
                     borderRadius: "12px",
                     background: "var(--gis-secondary)",
@@ -1276,6 +1310,12 @@ export function ConnectionPanel({
     <aside
       className="gis-tool-panel gis-panel"
       aria-labelledby="connection-title"
+      style={{
+        top: "18px",
+        left: "18px",
+        width: "340px",
+        maxHeight: "calc(100% - 68px)",
+      }}
     >
       <header className="gis-panel-header">
         <div>
@@ -1285,9 +1325,10 @@ export function ConnectionPanel({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close connection details"
+          aria-label="Collapse connection details side panel"
+          title="Collapse side panel"
         >
-          <X size={17} aria-hidden="true" />
+          <PanelLeftClose size={17} aria-hidden="true" />
         </button>
       </header>
       <div className="gis-panel-scroll">
