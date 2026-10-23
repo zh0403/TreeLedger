@@ -460,9 +460,12 @@ export function AdminCommandCenter({
   trees?: readonly AdminTreeRecord[] | null;
 }) {
   const router = useRouter();
-  const [activeView, setActiveView] = useState<WorkspaceView>(view);
+  const [activeView, setActiveView] = useState<WorkspaceView>(
+    view === "map" ? "overview" : view
+  );
   // Google Maps style: one unified docked left side panel that can slide open/closed
-  const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(view !== "map");
+  const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(true);
+  const [layersOpen, setLayersOpen] = useState<boolean>(false);
   const [treeList, setTreeList] = useState<readonly AdminTreeRecord[] | null>(
     trees && trees.length >= 40 ? trees : DEFAULT_40_TREES
   );
@@ -473,7 +476,7 @@ export function AdminCommandCenter({
   const [tableTab, setTableTab] = useState<
     "trees" | "hazards" | "maintenance"
   >("trees");
-  const [tool, setTool] = useState<"layers" | "connection" | null>(null);
+  const [tool, setTool] = useState<"connection" | null>(null);
   const [selected, setSelected] = useState<AdminTreeRecord | null>(null);
   const [basemap, setBasemap] = useState<Basemap>("geographic");
   const [showTrees, setShowTrees] = useState(true);
@@ -489,7 +492,6 @@ export function AdminCommandCenter({
     latitude: 3.1885,
     zoom: 14.8,
   });
-  const layerButton = useRef<HTMLButtonElement>(null);
   const connectionButton = useRef<HTMLButtonElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
 
@@ -518,21 +520,16 @@ export function AdminCommandCenter({
   // Switch active view inside the unified Google Maps-style Left Panel without reloading the map
   const handleSelectRailView = useCallback(
     (targetView: WorkspaceView) => {
+      const normalizedView = targetView === "map" ? "overview" : targetView;
       setDisplayMode("map");
       setTool(null);
       setSelected(null);
 
-      if (targetView === "map") {
-        // "Geographic view" collapses the left side panel so the operator can explore the full map
-        setActiveView("map");
-        setLeftPanelOpen((open) =>
-          activeView === "map" ? !open : false
-        );
-      } else if (activeView === targetView && tool === null && selected === null) {
+      if (activeView === normalizedView && tool === null && selected === null) {
         // Clicking the already-active rail tab toggles the left side panel open/closed
         setLeftPanelOpen((open) => !open);
       } else {
-        setActiveView(targetView);
+        setActiveView(normalizedView);
         setLeftPanelOpen(true);
       }
 
@@ -540,7 +537,7 @@ export function AdminCommandCenter({
         window.history.replaceState(
           null,
           "",
-          workspaceHref("admin", targetView)
+          workspaceHref("admin", normalizedView)
         );
       }
     },
@@ -559,16 +556,6 @@ export function AdminCommandCenter({
     setTool(null);
   };
 
-  const openLayers = () => {
-    setDisplayMode("map");
-    if (tool === "layers" && leftPanelOpen) {
-      setTool(null);
-    } else {
-      setTool("layers");
-      setLeftPanelOpen(true);
-    }
-  };
-
   const activePillStyle = useMemo(
     () => ({
       color: "#071c16",
@@ -581,18 +568,14 @@ export function AdminCommandCenter({
   );
 
   const ActiveHeaderIcon =
-    tool === "layers"
-      ? Layers3
-      : tool === "connection"
+    tool === "connection"
       ? ShieldCheck
       : selected
       ? Fingerprint
       : navIcons[activeView] ?? Compass;
 
   const panelHeaderTitle =
-    tool === "layers"
-      ? "Map Layers"
-      : tool === "connection"
+    tool === "connection"
       ? "Data Connections"
       : selected
       ? `Tree ${selected.id}`
@@ -742,54 +725,33 @@ export function AdminCommandCenter({
       </header>
 
       <Navigation className="gis-rail" label="Admin GIS tools">
-        {workspaceConfig.admin.navigation.map((item, index) => {
-          const Icon = navIcons[item.view] ?? Compass;
-          const isActive =
-            activeView === item.view &&
-            tool === null &&
-            (item.view === "map" ? !leftPanelOpen : leftPanelOpen);
-          const isLayersActive = tool === "layers" && leftPanelOpen;
-          return (
-            <div className="gis-tool-group" key={item.view}>
-              <button
-                type="button"
-                onClick={() => handleSelectRailView(item.view)}
-                className="gis-tool"
-                aria-label={item.label}
-                title={item.label}
-                aria-current={isActive ? "page" : undefined}
-                style={isActive ? activePillStyle : undefined}
-              >
-                <Icon
-                  size={20}
-                  strokeWidth={isActive ? 2 : 1.5}
-                  aria-hidden="true"
-                />
-                <span>{item.label}</span>
-              </button>
-              {index === 1 && (
+        {workspaceConfig.admin.navigation
+          .filter((item) => item.view !== "map")
+          .map((item) => {
+            const Icon = navIcons[item.view] ?? Compass;
+            const isActive =
+              activeView === item.view && tool === null && leftPanelOpen;
+            return (
+              <div className="gis-tool-group" key={item.view}>
                 <button
-                  ref={layerButton}
                   type="button"
+                  onClick={() => handleSelectRailView(item.view)}
                   className="gis-tool"
-                  title="Map layers"
-                  aria-label="Map layers"
-                  aria-expanded={isLayersActive}
-                  aria-controls="gis-unified-panel"
-                  onClick={openLayers}
-                  style={isLayersActive ? activePillStyle : undefined}
+                  aria-label={item.label}
+                  title={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  style={isActive ? activePillStyle : undefined}
                 >
-                  <Layers3
+                  <Icon
                     size={20}
-                    strokeWidth={isLayersActive ? 2 : 1.5}
+                    strokeWidth={isActive ? 2 : 1.5}
                     aria-hidden="true"
                   />
-                  <span>Map layers</span>
+                  <span>{item.label}</span>
                 </button>
-              )}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
         <NavigationLink
           href="/admin/operations"
           className="gis-tool gis-home"
@@ -1281,21 +1243,7 @@ export function AdminCommandCenter({
                 tabIndex={0}
                 style={{ flex: 1, padding: "0 16px 18px" }}
               >
-                {tool === "layers" ? (
-                  <LayerPanel
-                    trees={treeList}
-                    mapState={mapState}
-                    basemap={basemap}
-                    onBasemap={setBasemap}
-                    showTrees={showTrees}
-                    onTrees={setShowTrees}
-                    showHealth={showHealth}
-                    onHealth={setShowHealth}
-                    opacity={opacity}
-                    onOpacity={setOpacity}
-                    onClose={closeTool}
-                  />
-                ) : tool === "connection" ? (
+                {tool === "connection" ? (
                   <ConnectionPanel mapState={mapState} onClose={closeTool} />
                 ) : selected ? (
                   <TreePassportDetail
@@ -1324,34 +1272,284 @@ export function AdminCommandCenter({
               </footer>
             </aside>
 
-            {/* Compact Bottom Map Legend that shifts smoothly with the Left Side Panel */}
-            <div
-              className="gis-legend"
-              aria-label="Tree status reference"
+            {/* Unified Bottom-Right Map Control Panel: Map Layers + TreePine Badges & Status */}
+            <section
+              aria-label="Map layers and TreePine badge legend"
               style={{
-                left: leftPanelOpen ? "398px" : "24px",
-                bottom: "48px",
-                transition: "left 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+                position: "absolute",
+                right: "16px",
+                bottom: "46px",
+                zIndex: 5,
+                width: layersOpen ? "308px" : "auto",
+                maxWidth: "calc(100vw - 32px)",
+                border: "1px solid var(--gis-border)",
+                borderRadius: "12px",
+                background:
+                  "color-mix(in srgb, var(--gis-panel) 96%, transparent)",
+                backdropFilter: "blur(14px)",
+                boxShadow: "0 10px 28px rgba(2, 11, 19, 0.42)",
+                padding: "10px 12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                color: "var(--gis-text)",
+                fontSize: "11px",
               }}
             >
-              <span>TreePine badges</span>
-              <span>
-                <i className="gis-health-key gis-health-key--healthy" />
-                Healthy (≥80%)
-              </span>
-              <span>
-                <i className="gis-health-key gis-health-key--attention" />
-                Attention (60–79%)
-              </span>
-              <span>
-                <i className="gis-health-key gis-health-key--critical">!</i>
-                Critical (&lt;60%)
-              </span>
-              <span>
-                <i className="gis-verified-key" />
-                Arbitrum Verified
-              </span>
-            </div>
+              {/* Top Control Row: Basemap Quick Toggle + Expandable Layers Toggle */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                }}
+              >
+                <div
+                  role="group"
+                  aria-label="Basemap style"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    padding: "2px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--gis-border)",
+                    background: "var(--gis-base)",
+                    gap: "2px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={basemap === "geographic"}
+                    onClick={() => setBasemap("geographic")}
+                    style={{
+                      minHeight: "26px",
+                      padding: "0 10px",
+                      borderRadius: "6px",
+                      border: 0,
+                      fontSize: "10px",
+                      fontWeight: basemap === "geographic" ? 600 : 400,
+                      background:
+                        basemap === "geographic"
+                          ? "var(--gis-accent)"
+                          : "transparent",
+                      color:
+                        basemap === "geographic"
+                          ? "#071c16"
+                          : "var(--gis-muted)",
+                    }}
+                  >
+                    Light Map
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={basemap === "satellite"}
+                    onClick={() => setBasemap("satellite")}
+                    style={{
+                      minHeight: "26px",
+                      padding: "0 10px",
+                      borderRadius: "6px",
+                      border: 0,
+                      fontSize: "10px",
+                      fontWeight: basemap === "satellite" ? 600 : 400,
+                      background:
+                        basemap === "satellite"
+                          ? "var(--gis-accent)"
+                          : "transparent",
+                      color:
+                        basemap === "satellite"
+                          ? "#071c16"
+                          : "var(--gis-muted)",
+                    }}
+                  >
+                    Satellite
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  aria-expanded={layersOpen}
+                  onClick={() => setLayersOpen((open) => !open)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    minHeight: "28px",
+                    padding: "0 10px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--gis-border)",
+                    background: layersOpen
+                      ? "rgba(82, 217, 165, 0.14)"
+                      : "var(--gis-secondary)",
+                    color: layersOpen
+                      ? "var(--gis-accent)"
+                      : "var(--gis-text)",
+                    fontSize: "10px",
+                    fontWeight: 500,
+                  }}
+                >
+                  <Layers3 size={13} aria-hidden="true" />
+                  <span>Map layers</span>
+                  <ChevronDown
+                    size={12}
+                    aria-hidden="true"
+                    style={{
+                      transform: layersOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 160ms ease",
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* Expandable Layer Settings Drawer */}
+              {layersOpen && (
+                <div
+                  style={{
+                    paddingTop: "8px",
+                    borderTop: "1px solid var(--gis-border)",
+                    display: "grid",
+                    gap: "8px",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span style={{ color: "var(--gis-text)", fontSize: "11px" }}>
+                      TreePine canopy badges ({treeList?.length ?? 40})
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={showTrees}
+                      onChange={(e) => setShowTrees(e.target.checked)}
+                    />
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                      cursor: showTrees ? "pointer" : "not-allowed",
+                      opacity: showTrees ? 1 : 0.5,
+                    }}
+                  >
+                    <span style={{ color: "var(--gis-text)", fontSize: "11px" }}>
+                      Health condition colors
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={showHealth}
+                      disabled={!showTrees}
+                      onChange={(e) => setShowHealth(e.target.checked)}
+                    />
+                  </label>
+                  <label
+                    style={{
+                      display: "grid",
+                      gap: "4px",
+                      color: "var(--gis-muted)",
+                      fontSize: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>Badge opacity</span>
+                      <output style={{ color: "var(--gis-text)" }}>
+                        {Math.round(opacity * 100)}%
+                      </output>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.25"
+                      max="1"
+                      step="0.05"
+                      value={opacity}
+                      disabled={!showTrees}
+                      onChange={(e) => setOpacity(Number(e.target.value))}
+                      style={{
+                        width: "100%",
+                        accentColor: "var(--gis-accent)",
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {/* Merged TreePine Badges & Status Reference */}
+              <div
+                style={{
+                  paddingTop: "8px",
+                  borderTop: "1px solid var(--gis-border)",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "6px 12px",
+                  fontSize: "10px",
+                  color: "var(--gis-muted)",
+                }}
+              >
+                <span
+                  style={{
+                    color: "var(--gis-text)",
+                    fontWeight: 500,
+                    paddingRight: "8px",
+                    borderRight: "1px solid var(--gis-border)",
+                  }}
+                >
+                  TreePine badges
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  <i className="gis-health-key gis-health-key--healthy" />
+                  Healthy (≥80%)
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  <i className="gis-health-key gis-health-key--attention" />
+                  Attention (60–79%)
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  <i className="gis-health-key gis-health-key--critical">!</i>
+                  Critical (&lt;60%)
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  <i className="gis-verified-key" />
+                  Arbitrum Verified
+                </span>
+              </div>
+            </section>
           </>
         )}
 

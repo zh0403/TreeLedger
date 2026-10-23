@@ -178,7 +178,7 @@ export function GISMap({
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
         map.addControl(
           new mapboxgl.ScaleControl({ maxWidth: 110, unit: "metric" }),
-          "bottom-right"
+          "bottom-left"
         );
 
         const updateView = () => {
