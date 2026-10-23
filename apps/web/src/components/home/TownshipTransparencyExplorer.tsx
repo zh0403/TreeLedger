@@ -1,116 +1,49 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import mapboxgl from 'mapbox-gl';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import type { Map as MapboxMap, Marker, StyleSpecification } from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
-  ShieldCheck,
   ArrowUpRight,
-  ZoomIn,
-  ZoomOut,
-  Crosshair,
-  Globe,
-  Map as MapIcon,
+  Layers,
+  MapPin,
+  Navigation,
+  ShieldCheck,
+  TreePine,
   Trees,
   X,
 } from 'lucide-react';
 import { Tree } from '@/lib/types';
 import { fetchTrees } from '@/lib/api';
+import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 // City of Elmina Masterplan Center Coordinates [lng, lat]
 export const ELMINA_CENTER_LNG = 101.5034;
 export const ELMINA_CENTER_LAT = 3.1942;
 
-export type MapViewMode = 'default' | 'satellite';
-
-// Real, tokenless Mapbox GL Style v8 specifications using high-availability global GIS tile servers
-const FREE_REAL_MAP_STYLES: Record<MapViewMode, mapboxgl.StyleSpecification> = {
-  default: {
-    version: 8,
-    name: 'Elmina Default Street & Park GIS',
-    sources: {
-      'carto-voyager': {
-        type: 'raster',
-        tiles: [
-          'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-          'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-          'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        ],
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors © CARTO',
-      },
+// Same geographic basemap specification used in /app (resident-map.tsx)
+const geographicStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    geography: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
     },
-    layers: [
-      {
-        id: 'carto-voyager-layer',
-        type: 'raster',
-        source: 'carto-voyager',
-        minzoom: 0,
-        maxzoom: 20,
-      },
-    ],
   },
-  satellite: {
-    version: 8,
-    name: 'Elmina Satellite Hybrid Imagery',
-    sources: {
-      'esri-world-imagery': {
-        type: 'raster',
-        tiles: [
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        ],
-        tileSize: 256,
-        attribution: '© Esri, Maxar, Earthstar Geographics',
-      },
-      'esri-transportation': {
-        type: 'raster',
-        tiles: [
-          'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-        ],
-        tileSize: 256,
-      },
-      'carto-labels': {
-        type: 'raster',
-        tiles: [
-          'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
-          'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
-        ],
-        tileSize: 256,
-      },
+  layers: [
+    {
+      id: 'geography',
+      type: 'raster',
+      source: 'geography',
+      paint: { 'raster-saturation': -0.6, 'raster-brightness-max': 0.75 },
     },
-    layers: [
-      {
-        id: 'esri-satellite-base',
-        type: 'raster',
-        source: 'esri-world-imagery',
-        minzoom: 0,
-        maxzoom: 19,
-      },
-      {
-        id: 'esri-satellite-roads',
-        type: 'raster',
-        source: 'esri-transportation',
-        minzoom: 0,
-        maxzoom: 19,
-        paint: {
-          'raster-opacity': 0.85,
-        },
-      },
-      {
-        id: 'carto-hybrid-labels',
-        type: 'raster',
-        source: 'carto-labels',
-        minzoom: 0,
-        maxzoom: 20,
-      },
-    ],
-  },
-};
-
-const MAPBOX_CLOUD_STYLES: Record<MapViewMode, string> = {
-  default: 'mapbox://styles/mapbox/navigation-night-v1',
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+  ],
 };
 
 const PRECINCT_TABS = [
@@ -138,7 +71,7 @@ const PRECINCT_META: Record<
   'All Projects': {
     lng: ELMINA_CENTER_LNG,
     lat: ELMINA_CENTER_LAT,
-    zoom: 14.9,
+    zoom: 14.8,
     delivered: 40,
     target: 40,
     contractor: 'Elmina GreenWorks Sdn Bhd',
@@ -404,51 +337,45 @@ function mergeAndNormalizeTrees(fetched: Tree[]): Tree[] {
 function getHealthMeta(score: number): {
   label: string;
   tone: 'healthy' | 'warning' | 'critical';
-  hex: string;
-  ringHex: string;
+  bg: string;
 } {
   if (score >= 80) {
     return {
       label: `Healthy ${score}%`,
       tone: 'healthy',
-      hex: '#52d9a5',
-      ringHex: 'rgba(82, 217, 165, 0.38)',
+      bg: '#a3e1b5',
     };
   }
   if (score >= 50) {
     return {
       label: `Monitor ${score}%`,
       tone: 'warning',
-      hex: '#e5ae50',
-      ringHex: 'rgba(229, 174, 80, 0.38)',
+      bg: '#e5ae50',
     };
   }
   return {
     label: `Critical ${score}%`,
     tone: 'critical',
-    hex: '#e36b67',
-    ringHex: 'rgba(227, 107, 103, 0.44)',
+    bg: '#e36b67',
   };
 }
 
-export function TownshipTransparencyExplorer() {
+export function TownshipTransparencyExplorer({
+  showEditorialIntro = false,
+}: {
+  showEditorialIntro?: boolean;
+}) {
   const [trees, setTrees] = useState<Tree[]>(ELMINA_CANOPY_TREES);
   const [selectedPrecinct, setSelectedPrecinct] = useState<PrecinctTab>('All Projects');
   const [selectedTree, setSelectedTree] = useState<Tree | null>(ELMINA_CANOPY_TREES[0]);
 
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
-
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || '';
-  const [useFallbackMap, setUseFallbackMap] = useState<boolean>(false);
-  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-  const [mapStyleMode, setMapStyleMode] = useState<MapViewMode>('default');
-  const [fallbackZoom, setFallbackZoom] = useState<number>(1);
-  const [fallbackCenter, setFallbackCenter] = useState<{ lng: number; lat: number }>({
-    lng: ELMINA_CENTER_LNG,
-    lat: ELMINA_CENTER_LAT,
-  });
+  // Same Mapbox engine state as /app (resident-map.tsx)
+  const container = useRef<HTMLDivElement>(null);
+  const map = useRef<MapboxMap | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [satellite, setSatellite] = useState(true);
+  const satelliteMode = useRef(true);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     fetchTrees().then((data) => {
@@ -471,32 +398,151 @@ export function TownshipTransparencyExplorer() {
     return Math.round(sum / filteredTrees.length);
   }, [filteredTrees]);
 
-  const flyToCoordinates = useCallback(
-    (lng: number, lat: number, targetZoom = 16.0) => {
-      if (!useFallbackMap && mapInstanceRef.current) {
-        try {
-          mapInstanceRef.current.flyTo({
-            center: [lng, lat],
-            zoom: targetZoom,
-            pitch: 28,
-            bearing: 0,
-            duration: 750,
-          });
-        } catch {
-          // Ignore camera animation interruption
-        }
-      } else {
-        setFallbackCenter({ lng, lat });
-        setFallbackZoom(targetZoom >= 16 ? 1.25 : targetZoom <= 15.1 ? 1.0 : 1.15);
+  // Boot Mapbox exactly like /app (resident-map.tsx)
+  useEffect(() => {
+    let disposed = false;
+    let instance: MapboxMap | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+    const boot = async () => {
+      if (!token?.startsWith('pk.')) {
+        satelliteMode.current = false;
+        setSatellite(false);
       }
-    },
-    [useFallbackMap]
-  );
+      setStatus('loading');
+      try {
+        const { default: mapboxgl } = await import('mapbox-gl');
+        if (disposed || !container.current) return;
+        instance = new mapboxgl.Map({
+          container: container.current,
+          accessToken: token,
+          style: satelliteMode.current
+            ? 'mapbox://styles/mapbox/satellite-streets-v12'
+            : geographicStyle,
+          center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
+          zoom: 14.8,
+          attributionControl: true,
+        });
+        map.current = instance;
+        instance.addControl(
+          new mapboxgl.NavigationControl({ showCompass: false }),
+          'bottom-right'
+        );
+        instance.on('idle', () => {
+          clearTimeout(timeout);
+          if (!disposed) setStatus('ready');
+        });
+        const fail = () => {
+          if (disposed) return;
+          clearTimeout(timeout);
+          if (satelliteMode.current) {
+            satelliteMode.current = false;
+            setSatellite(false);
+            instance?.setStyle(geographicStyle);
+            timeout = setTimeout(() => {
+              if (!disposed) setStatus('error');
+            }, 15000);
+          } else {
+            setStatus('error');
+          }
+        };
+        instance.on('error', (event) => {
+          if ('sourceId' in event || !instance?.isStyleLoaded()) fail();
+        });
+        timeout = setTimeout(fail, 15000);
+      } catch {
+        if (!disposed) setStatus('error');
+      }
+    };
+
+    void boot();
+    return () => {
+      disposed = true;
+      clearTimeout(timeout);
+      instance?.remove();
+      if (map.current === instance) map.current = null;
+    };
+  }, [attempt]);
+
+  useEffect(() => {
+    satelliteMode.current = satellite;
+    const instance = map.current;
+    if (instance) {
+      instance.setStyle(
+        satellite ? 'mapbox://styles/mapbox/satellite-streets-v12' : geographicStyle
+      );
+    }
+  }, [satellite]);
+
+  // Render TreePine markers and fit bounds exactly like /app (resident-map.tsx)
+  useEffect(() => {
+    if (status !== 'ready' || !map.current) return;
+    let disposed = false;
+    const markers: Marker[] = [];
+    const roots: Root[] = [];
+    const instance = map.current;
+
+    void import('mapbox-gl').then(({ default: mapboxgl }) => {
+      if (disposed) return;
+      for (const tree of filteredTrees) {
+        const isSelected = selectedTree?.id === tree.id;
+        const meta = getHealthMeta(tree.health_score);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.setAttribute('aria-label', `${tree.common_name}: ${meta.label}`);
+        button.setAttribute('aria-pressed', String(isSelected));
+        button.style.display = 'grid';
+        button.style.placeItems = 'center';
+        button.style.padding = '0';
+        button.style.width = '40px';
+        button.style.height = '40px';
+        button.style.border = '2px solid #d5f2b4';
+        button.style.borderRadius = '50%';
+        button.style.color = '#071c16';
+        button.style.background = meta.bg;
+        button.style.boxShadow = isSelected
+          ? '0 0 25px rgba(163, 225, 181, 0.7)'
+          : '0 3px 15px rgba(0, 0, 0, 0.4)';
+        if (isSelected) {
+          button.style.outline = '3px solid #f5f7f2';
+          button.style.outlineOffset = '4px';
+        }
+        button.style.cursor = 'pointer';
+        button.addEventListener('click', () => {
+          setSelectedTree(tree);
+          instance.easeTo({
+            center: [tree.longitude, tree.latitude],
+            zoom: Math.max(instance.getZoom(), 16.0),
+            duration: 600,
+          });
+        });
+        const root = createRoot(button);
+        root.render(<TreePine size={17} aria-hidden="true" />);
+        roots.push(root);
+        markers.push(
+          new mapboxgl.Marker({ element: button })
+            .setLngLat([tree.longitude, tree.latitude])
+            .addTo(instance)
+        );
+      }
+
+      if (filteredTrees.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        filteredTrees.forEach((t) => bounds.extend([t.longitude, t.latitude]));
+        instance.fitBounds(bounds, { padding: 80, maxZoom: 16.2, duration: 650 });
+      }
+    });
+
+    return () => {
+      disposed = true;
+      markers.forEach((m) => m.remove());
+      roots.forEach((r) => r.unmount());
+    };
+  }, [filteredTrees, status, selectedTree?.id]);
 
   const handleSelectPrecinct = (tab: PrecinctTab) => {
     setSelectedPrecinct(tab);
-    const meta = PRECINCT_META[tab];
-    flyToCoordinates(meta.lng, meta.lat, meta.zoom);
     const nextTrees =
       tab === 'All Projects' ? trees : trees.filter((t) => t.precinct === tab);
     if (nextTrees.length > 0) {
@@ -504,508 +550,340 @@ export function TownshipTransparencyExplorer() {
     }
   };
 
-  const handleSelectTree = useCallback(
-    (tree: Tree) => {
-      setSelectedTree(tree);
-      flyToCoordinates(tree.longitude, tree.latitude, 16.4);
-    },
-    [flyToCoordinates]
-  );
-
-  useEffect(() => {
-    if (useFallbackMap || !mapContainerRef.current) {
-      return;
-    }
-
-    let isCancelled = false;
-    const markers = markersRef.current;
-
-    try {
-      const mapProto = mapboxgl.Map.prototype as unknown as {
-        _authenticate?: () => void;
-        _revokeAuth?: () => void;
-      };
-      mapProto._authenticate = () => {};
-      mapProto._revokeAuth = () => {};
-
-      if (mapboxToken) {
-        mapboxgl.accessToken = mapboxToken;
-      }
-
-      const initialStyle = mapboxToken
-        ? MAPBOX_CLOUD_STYLES[mapStyleMode]
-        : FREE_REAL_MAP_STYLES[mapStyleMode];
-
-      const mapOptions: mapboxgl.MapOptions & { testMode?: boolean } = {
-        container: mapContainerRef.current,
-        style: initialStyle,
-        center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
-        zoom: 14.9,
-        pitch: 28,
-        bearing: 0,
-        attributionControl: false,
-        testMode: !mapboxToken,
-      };
-
-      const map = new mapboxgl.Map(mapOptions);
-      mapInstanceRef.current = map;
-
-      map.on('load', () => {
-        if (!isCancelled) {
-          setMapLoaded(true);
-        }
-      });
-
-      map.on('style.load', () => {
-        if (!isCancelled) {
-          setMapLoaded(true);
-        }
-      });
-
-      map.on('error', () => {
-        if (!isCancelled && mapInstanceRef.current && mapboxToken) {
-          try {
-            mapInstanceRef.current.setStyle(FREE_REAL_MAP_STYLES[mapStyleMode]);
-            setMapLoaded(true);
-          } catch {
-            setUseFallbackMap(true);
-          }
-        }
-      });
-
-      return () => {
-        isCancelled = true;
-        markers.forEach((m) => m.remove());
-        markers.clear();
-        map.remove();
-        mapInstanceRef.current = null;
-        setMapLoaded(false);
-      };
-    } catch {
-      queueMicrotask(() => {
-        if (!isCancelled) setUseFallbackMap(true);
-      });
-      return () => {
-        isCancelled = true;
-      };
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapboxToken, useFallbackMap]);
-
-  const handleToggleMapStyle = () => {
-    const nextMode: MapViewMode = mapStyleMode === 'default' ? 'satellite' : 'default';
-    setMapStyleMode(nextMode);
-    if (!useFallbackMap && mapInstanceRef.current) {
-      try {
-        const nextStyle = mapboxToken
-          ? MAPBOX_CLOUD_STYLES[nextMode]
-          : FREE_REAL_MAP_STYLES[nextMode];
-        mapInstanceRef.current.setStyle(nextStyle);
-      } catch {
-        setUseFallbackMap(true);
-      }
-    }
-  };
-
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (useFallbackMap || !map || !mapLoaded) return;
-
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current.clear();
-
-    filteredTrees.forEach((tree) => {
-      const meta = getHealthMeta(tree.health_score);
-      const isSelected = selectedTree?.id === tree.id;
-
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.setAttribute('aria-label', `Inspect tree ${tree.id}`);
-      el.style.width = isSelected ? '26px' : '18px';
-      el.style.height = isSelected ? '26px' : '18px';
-      el.style.borderRadius = '9999px';
-      el.style.backgroundColor = meta.hex;
-      el.style.border = isSelected ? '3px solid #F5F7F2' : '2px solid #0B1D18';
-      el.style.boxShadow = isSelected
-        ? `0 0 0 6px ${meta.ringHex}, 0 4px 16px rgba(0,0,0,0.6)`
-        : `0 0 0 4px ${meta.ringHex}`;
-      el.style.cursor = 'pointer';
-      el.style.transition = 'all 160ms ease';
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleSelectTree(tree);
-      });
-
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([tree.longitude, tree.latitude])
-        .addTo(map);
-
-      markersRef.current.set(tree.id, marker);
-    });
-  }, [filteredTrees, selectedTree, useFallbackMap, mapLoaded, handleSelectTree]);
-
-  const handleZoom = (delta: number) => {
-    if (!useFallbackMap && mapInstanceRef.current) {
-      const nextZoom = mapInstanceRef.current.getZoom() + delta;
-      mapInstanceRef.current.zoomTo(nextZoom, { duration: 250 });
-    } else {
-      setFallbackZoom((z) =>
-        Math.min(1.6, Math.max(0.8, Number((z + delta * 0.15).toFixed(2))))
-      );
-    }
-  };
-
   const handleRecenter = () => {
     const meta = PRECINCT_META[selectedPrecinct];
-    flyToCoordinates(meta.lng, meta.lat, meta.zoom);
-  };
-
-  const projectToFallbackPercent = (lat: number, lng: number) => {
-    const latSpan = 0.011;
-    const lngSpan = 0.014;
-    const x = 50 + ((lng - fallbackCenter.lng) / (lngSpan / 2)) * 38;
-    const y = 50 - ((lat - fallbackCenter.lat) / (latSpan / 2)) * 38;
-    return {
-      x: Math.min(90, Math.max(10, x)),
-      y: Math.min(86, Math.max(14, y)),
-    };
+    map.current?.easeTo({
+      center: [meta.lng, meta.lat],
+      zoom: meta.zoom,
+      duration: 650,
+    });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Filter Bar: Frosted-Glass Pill Selector */}
-      <div
-        role="tablist"
-        aria-label="City of Elmina project precincts"
-        className="inline-flex flex-wrap items-center gap-1.5 p-1.5 rounded-[var(--radius-pill)] bg-[var(--surface)]/80 backdrop-blur-xl border border-[var(--border)] shadow-[var(--shadow-panel)]"
-      >
-        {PRECINCT_TABS.map((tab) => {
-          const active = selectedPrecinct === tab;
-          return (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => handleSelectPrecinct(tab)}
-              className={`min-h-[38px] px-4 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all cursor-pointer ${
-                active
-                  ? 'bg-[var(--accent)] text-[var(--forest-950)] font-semibold shadow-sm'
-                  : 'text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)]/60'
-              }`}
-            >
-              {tab}
-            </button>
-          );
-        })}
-      </div>
+    <div
+      className={
+        showEditorialIntro
+          ? 'grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start'
+          : 'space-y-6'
+      }
+    >
+      {/* Left Column: Editorial Chapter Copy matching 01/, 02/, and 03/ */}
+      {showEditorialIntro && (
+        <div className="lg:col-span-5 chapter-copy max-w-none" data-reveal>
+          <Trees
+            className="chapter-icon"
+            size={29}
+            strokeWidth={1.3}
+            aria-hidden="true"
+          />
+          <SectionHeading id="ledger-title" label="04 / The living ledger">
+            Every promise planted.
+            <br />
+            Every warranty sealed.
+          </SectionHeading>
+          <p>
+            Pre-handover green quota audits and 2-year defect liability period
+            tracking for City of Elmina homebuyers.
+          </p>
 
-      {/* Editorial Map Canvas (~560px) with Floating Glass HUD & Tree Capsule */}
-      <div className="relative w-full h-[560px] rounded-[var(--radius-panel)] bg-[var(--forest-950)] border border-[var(--border)] shadow-[0_0_65px_-18px_rgba(82,217,165,0.18)] overflow-hidden">
-        {/* Top-Left Floating Glass HUD */}
-        <div className="absolute top-4 left-4 z-20 max-w-xs sm:max-w-sm rounded-[var(--radius-panel)] bg-[var(--forest-950)]/82 backdrop-blur-xl border border-[var(--border)] p-4 shadow-2xl pointer-events-auto">
-          <div className="flex items-center justify-between gap-3 mb-2.5">
-            <span className="text-[11px] uppercase tracking-wider font-mono text-[var(--accent)] flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
-              {selectedPrecinct}
+          {/* Editorial Hairline Proof Steps (same rhythm as 03 / Environmental accountability) */}
+          <ol className="proof-steps">
+            <li>
+              <span>01</span>
+              {activeMeta.delivered}/{activeMeta.target} Planted
+            </li>
+            <li>
+              <span>02</span>
+              {avgHealth}% Vitality
+            </li>
+            <li>
+              <span>03</span>
+              2-Yr DLP Active
+            </li>
+            <li>
+              <span>04</span>
+              14-Day SLA
+            </li>
+          </ol>
+
+          {/* Editorial Hairline Details (same rhythm as 01 / Digital tree identity) */}
+          <div className="chapter-details">
+            <span>
+              <Trees size={18} aria-hidden="true" />
+              2-Year DLP Warranty · 14-day mandatory replacement &amp; 85%
+              survival benchmark at zero resident cost
+            </span>
+            <span>
+              <MapPin size={18} aria-hidden="true" />
+              {activeMeta.contractor} · {selectedPrecinct}
             </span>
           </div>
 
-          <dl className="space-y-2 text-xs">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-[var(--muted)]">Quota Delivery</dt>
-              <dd className="font-mono font-semibold text-[var(--foreground)]">
-                {activeMeta.delivered} / {activeMeta.target} Delivered (100% Fulfilled)
-              </dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-[var(--muted)]">Canopy Health</dt>
-              <dd className="font-mono font-semibold text-[var(--accent)]">
-                {avgHealth}% Avg Health Index
-              </dd>
-            </div>
-            <div className="pt-2 border-t border-[var(--border)] flex items-baseline justify-between gap-3">
-              <dt className="text-[var(--muted)] shrink-0">Contractor</dt>
-              <dd className="text-right text-[var(--foreground)] font-medium truncate">
-                {activeMeta.contractor} ·{' '}
-                <span className="text-[var(--accent-soft)]">{activeMeta.dlpLabel}</span>
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Top-Right Minimalist Map Controls */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 pointer-events-auto">
-          <button
-            type="button"
-            onClick={handleToggleMapStyle}
-            className="min-h-[40px] px-3 py-2 rounded-[var(--radius-control)] bg-[var(--forest-950)]/82 hover:bg-[var(--surface-raised)] backdrop-blur-xl border border-[var(--border)] text-xs font-medium text-[var(--foreground)] flex items-center gap-1.5 shadow-lg transition cursor-pointer"
-            title={
-              mapStyleMode === 'default'
-                ? 'Switch to Satellite View'
-                : 'Switch to Street View'
-            }
-          >
-            {mapStyleMode === 'default' ? (
-              <>
-                <Globe className="w-3.5 h-3.5 text-[var(--verification)]" />
-                <span>Satellite</span>
-              </>
-            ) : (
-              <>
-                <MapIcon className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <span>Street</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleZoom(1)}
-            className="min-h-[40px] min-w-[40px] p-2 rounded-[var(--radius-control)] bg-[var(--forest-950)]/82 hover:bg-[var(--surface-raised)] backdrop-blur-xl border border-[var(--border)] text-[var(--foreground)] flex items-center justify-center shadow-lg transition cursor-pointer"
-            aria-label="Zoom in"
-            title="Zoom in"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleZoom(-1)}
-            className="min-h-[40px] min-w-[40px] p-2 rounded-[var(--radius-control)] bg-[var(--forest-950)]/82 hover:bg-[var(--surface-raised)] backdrop-blur-xl border border-[var(--border)] text-[var(--foreground)] flex items-center justify-center shadow-lg transition cursor-pointer"
-            aria-label="Zoom out"
-            title="Zoom out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleRecenter}
-            className="min-h-[40px] min-w-[40px] p-2 rounded-[var(--radius-control)] bg-[var(--forest-950)]/82 hover:bg-[var(--surface-raised)] backdrop-blur-xl border border-[var(--border)] text-[var(--accent)] flex items-center justify-center shadow-lg transition cursor-pointer"
-            aria-label="Recenter map"
-            title="Recenter map"
-          >
-            <Crosshair className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Mapbox WebGL Surface or Editorial Vector Cartography Fallback */}
-        <div className="relative w-full h-full">
-          {!useFallbackMap ? (
-            <div ref={mapContainerRef} className="w-full h-full" />
-          ) : (
-            <div
-              onClick={() => setSelectedTree(null)}
-              className="relative w-full h-full bg-[var(--forest-950)] overflow-hidden select-none"
-            >
-              <svg
-                viewBox="0 0 1000 560"
-                preserveAspectRatio="xMidYMid slice"
-                className="w-full h-full opacity-90 transition-transform duration-500"
-                style={{ transform: `scale(${fallbackZoom})` }}
-              >
-                <defs>
-                  <pattern
-                    id="editorial-grid"
-                    width="56"
-                    height="56"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <path
-                      d="M 56 0 L 0 0 0 56"
-                      fill="none"
-                      stroke="rgba(201, 237, 218, 0.08)"
-                      strokeWidth="1"
-                    />
-                  </pattern>
-                  <radialGradient id="canopy-ambient" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="rgba(82, 217, 165, 0.16)" />
-                    <stop offset="70%" stopColor="rgba(21, 53, 43, 0.06)" />
-                    <stop offset="100%" stopColor="rgba(11, 29, 24, 0)" />
-                  </radialGradient>
-                </defs>
-                <rect width="1000" height="560" fill="url(#editorial-grid)" />
-                <circle cx="500" cy="280" r="250" fill="url(#canopy-ambient)" />
-                <path
-                  d="M 40,370 C 210,335 330,235 490,260 C 640,285 760,210 960,165"
-                  fill="none"
-                  stroke="rgba(89, 200, 232, 0.16)"
-                  strokeWidth="22"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="500"
-                  cy="280"
-                  r="110"
-                  fill="none"
-                  stroke="rgba(201, 237, 218, 0.12)"
-                  strokeDasharray="4 6"
-                />
-                <circle
-                  cx="500"
-                  cy="280"
-                  r="205"
-                  fill="none"
-                  stroke="rgba(201, 237, 218, 0.09)"
-                />
-              </svg>
-
-              <div
-                className="absolute inset-0 transition-transform duration-500"
-                style={{ transform: `scale(${fallbackZoom})` }}
-              >
-                {filteredTrees.map((tree) => {
-                  const pos = projectToFallbackPercent(tree.latitude, tree.longitude);
-                  const meta = getHealthMeta(tree.health_score);
-                  const isSelected = selectedTree?.id === tree.id;
-
-                  return (
-                    <button
-                      key={tree.id}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectTree(tree);
-                      }}
-                      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                      aria-label={`Inspect tree ${tree.id}`}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 focus:outline-none"
-                    >
-                      <span
-                        className={`block rounded-full transition-all duration-200 ${
-                          isSelected
-                            ? 'w-6 h-6 ring-4 ring-[var(--foreground)] scale-110'
-                            : 'w-4 h-4 hover:scale-125 ring-2 ring-[var(--forest-950)]'
-                        }`}
-                        style={{
-                          backgroundColor: meta.hex,
-                          boxShadow: `0 0 14px ${meta.ringHex}`,
-                        }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Floating Tree Capsule */}
-        {selectedTree && (
-          <div
-            role="region"
-            aria-label="Selected tree capsule"
-            className="absolute bottom-4 left-4 right-4 z-20 mx-auto max-w-3xl rounded-[var(--radius-panel)] bg-[var(--forest-950)]/88 backdrop-blur-xl border border-[var(--border)] px-4 py-3.5 shadow-2xl transition-all duration-200 pointer-events-auto"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start sm:items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0">
-                  <Trees className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-[var(--accent)]">
-                      {selectedTree.id}
-                    </span>
-                    <span className="text-[var(--muted)]">·</span>
-                    <span className="text-sm font-medium text-[var(--foreground)] truncate">
-                      {selectedTree.common_name}{' '}
-                      <em className="text-[var(--muted)] font-normal">
-                        ({selectedTree.species})
-                      </em>
-                    </span>
-                  </div>
-                  <div className="text-xs text-[var(--muted)] font-mono mt-0.5 flex flex-wrap items-center gap-2">
-                    <span>
-                      {selectedTree.latitude.toFixed(4)}° N,{' '}
-                      {selectedTree.longitude.toFixed(4)}° E
-                    </span>
-                    <span>·</span>
-                    <span>{selectedTree.precinct}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                <StatusBadge tone={getHealthMeta(selectedTree.health_score).tone}>
-                  {getHealthMeta(selectedTree.health_score).label}
-                </StatusBadge>
-
+          {/* Arbitrum Sepolia Audit Note (same rhythm as 03 / Environmental accountability) */}
+          <div className="audit-note mt-6 pt-5 border-t border-[var(--border)]">
+            <ShieldCheck size={18} aria-hidden="true" />
+            <p>
+              Cryptographic proof-of-work hash verification anchored on Arbitrum
+              Sepolia.
+              <span>
+                TreeLedgerAudit Contract:{' '}
                 <a
                   href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[var(--verification)] hover:text-[var(--foreground)] transition"
+                  className="text-[var(--verification)] hover:underline"
                 >
-                  <span>Verify on Arbitrum Sepolia</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  0x685049b310922F6bc8d6FA17ddae010E13803701
                 </a>
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedTree(null)}
-                  className="p-1.5 rounded-[8px] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-raised)] transition cursor-pointer"
-                  aria-label="Close tree capsule"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
+      {/* Right Column: Interactive /app Mapbox Stage & HUD */}
+      <div
+        className={
+          showEditorialIntro ? 'lg:col-span-7 space-y-4' : 'space-y-5'
+        }
+      >
+        {/* Frosted-Glass Precinct Pill Selector */}
+        <div
+          role="tablist"
+          aria-label="City of Elmina project precincts"
+          className="inline-flex flex-wrap items-center gap-1.5 p-1.5 rounded-[var(--radius-pill)] bg-[var(--surface)]/85 backdrop-blur-xl border border-[var(--border)]"
+        >
+          {PRECINCT_TABS.map((tab) => {
+            const active = selectedPrecinct === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => handleSelectPrecinct(tab)}
+                className={`min-h-[36px] px-3.5 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all cursor-pointer ${
+                  active
+                    ? 'bg-[var(--accent)] text-[var(--forest-950)] font-semibold'
+                    : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Interactive Mapbox Canvas (using /app geographicStyle & satellite API) */}
+        <div
+          className={`relative w-full h-[540px] rounded-[var(--radius-panel)] bg-[#0b241d] border border-[var(--border)] shadow-[0_0_60px_-18px_rgba(82,217,165,0.16)] overflow-hidden ${
+            satellite
+              ? '[&_.mapboxgl-canvas]:saturate-[.75] [&_.mapboxgl-canvas]:brightness-[.75]'
+              : '[&_.mapboxgl-canvas]:sepia-[.4] [&_.mapboxgl-canvas]:hue-rotate-[65deg] [&_.mapboxgl-canvas]:saturate-[.7] [&_.mapboxgl-canvas]:brightness-[.65]'
+          }`}
+        >
+          <div ref={container} className="absolute inset-0" />
+
+          {/* Floating Glass HUD (Top-Left) */}
+          <div className="absolute top-4 left-4 z-10 max-w-xs rounded-[var(--radius-panel)] bg-[#071c16]/88 backdrop-blur-xl border border-[var(--border)] px-4 py-3.5 shadow-xl pointer-events-auto">
+            <div className="text-[11px] uppercase tracking-wider text-[var(--accent-soft)] font-mono flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+              <span>{selectedPrecinct}</span>
             </div>
+            <dl className="space-y-1.5 text-xs">
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-[var(--muted)]">Quota Delivery</dt>
+                <dd className="font-mono text-[var(--foreground)]">
+                  {activeMeta.delivered} / {activeMeta.target} Delivered (100%
+                  Fulfilled)
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-[var(--muted)]">Canopy Health</dt>
+                <dd className="font-mono text-[var(--accent)]">
+                  {avgHealth}% Avg Health Index
+                </dd>
+              </div>
+              <div className="pt-1.5 border-t border-[var(--border)] flex items-baseline justify-between gap-3">
+                <dt className="text-[var(--muted)] shrink-0">Contractor</dt>
+                <dd className="text-right text-[var(--foreground)] truncate">
+                  {activeMeta.contractor} · {activeMeta.dlpLabel}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Minimalist Map Tools (Top-Right, matching /app explorer-map-tools) */}
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-2 pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => setSatellite((v) => !v)}
+              aria-label={
+                satellite
+                  ? 'Switch to geographic basemap'
+                  : 'Switch to satellite imagery'
+              }
+              title={
+                satellite
+                  ? 'Switch to geographic basemap'
+                  : 'Switch to satellite imagery'
+              }
+              className="w-11 h-11 rounded-full bg-[#071c16]/88 hover:bg-[var(--surface-raised)] border border-[#a3e1b57a] text-[var(--foreground)] grid place-items-center shadow-lg transition cursor-pointer"
+            >
+              <Layers size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRecenter}
+              aria-label="Recenter on precinct"
+              title="Recenter on precinct"
+              className="w-11 h-11 rounded-full bg-[#071c16]/88 hover:bg-[var(--surface-raised)] border border-[#a3e1b57a] text-[var(--accent)] grid place-items-center shadow-lg transition cursor-pointer"
+            >
+              <Navigation size={17} aria-hidden="true" />
+            </button>
+          </div>
+
+          {status === 'loading' && (
+            <p
+              className="absolute bottom-4 right-16 z-10 px-3 py-1.5 rounded-[8px] bg-[#071c16]/90 text-[11px] text-[var(--muted)]"
+              role="status"
+            >
+              Opening City of Elmina map…
+            </p>
+          )}
+
+          {status === 'error' && (
+            <div
+              className="absolute inset-x-6 top-1/3 z-10 max-w-sm mx-auto p-5 rounded-[var(--radius-panel)] bg-[#071c16]/92 border border-[var(--border)] text-xs text-[var(--muted)] space-y-3"
+              role="status"
+            >
+              <p className="text-sm text-[var(--foreground)] font-medium">
+                Map connection interrupted.
+              </p>
+              <button
+                type="button"
+                onClick={() => setAttempt((a) => a + 1)}
+                className="min-h-[38px] px-3.5 py-1.5 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--control-border)] text-[var(--foreground)] cursor-pointer"
+              >
+                Retry map
+              </button>
+            </div>
+          )}
+
+          {/* Floating Tree Capsule (Bottom of map) */}
+          {selectedTree && (
+            <aside
+              aria-label="Selected tree capsule"
+              className="absolute bottom-4 left-4 right-16 z-10 max-w-2xl rounded-[var(--radius-panel)] bg-[#0b241d]/92 backdrop-blur-xl border border-[#a3e1b555] px-4 py-3 shadow-2xl pointer-events-auto"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <TreePine
+                    size={22}
+                    strokeWidth={1.3}
+                    className="text-[var(--accent)] shrink-0"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono font-semibold text-[var(--accent-soft)]">
+                        {selectedTree.id}
+                      </span>
+                      <span className="text-[var(--muted)]">·</span>
+                      <span className="text-sm font-medium text-[var(--foreground)] truncate">
+                        {selectedTree.common_name}{' '}
+                        <em className="text-[var(--muted)] font-normal">
+                          ({selectedTree.species})
+                        </em>
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[var(--muted)] font-mono mt-0.5">
+                      {selectedTree.latitude.toFixed(4)}° N,{' '}
+                      {selectedTree.longitude.toFixed(4)}° E ·{' '}
+                      {selectedTree.precinct}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <StatusBadge
+                    tone={getHealthMeta(selectedTree.health_score).tone}
+                  >
+                    {getHealthMeta(selectedTree.health_score).label}
+                  </StatusBadge>
+                  <a
+                    href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-[var(--accent-soft)] hover:text-[var(--foreground)] transition"
+                  >
+                    <span>Verify on Arbitrum Sepolia</span>
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </a>
+                  <button
+                    type="button"
+                    aria-label="Close tree capsule"
+                    onClick={() => setSelectedTree(null)}
+                    className="p-1 rounded-full text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer"
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </aside>
+          )}
+        </div>
+
+        {/* Standalone Guarantee Cards when rendered on /map without the left editorial column */}
+        {!showEditorialIntro && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <article className="surface-panel p-5 flex items-start gap-3.5">
+              <Trees
+                size={22}
+                strokeWidth={1.4}
+                className="text-[var(--accent)] shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-medium text-[var(--foreground)]">
+                    2-Year DLP Warranty
+                  </h3>
+                  <StatusBadge tone="healthy">Zero Resident Cost</StatusBadge>
+                </div>
+                <p className="text-xs text-[var(--muted)] leading-relaxed">
+                  14-day mandatory sapling replacement and 85% survival rate
+                  benchmark at zero resident cost.
+                </p>
+              </div>
+            </article>
+
+            <article className="surface-panel p-5 flex items-start gap-3.5">
+              <ShieldCheck
+                size={22}
+                strokeWidth={1.4}
+                className="text-[var(--verification)] shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
+              <div className="space-y-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-medium text-[var(--foreground)]">
+                    Arbitrum Sepolia Seal
+                  </h3>
+                  <StatusBadge tone="verified">On-Chain Proof</StatusBadge>
+                </div>
+                <p className="text-xs text-[var(--muted)] leading-relaxed">
+                  Cryptographic proof-of-work hash verification anchored to
+                  contract{' '}
+                  <span className="font-mono text-[11px] text-[var(--verification)] break-all">
+                    0x685049b310922F6bc8d6FA17ddae010E13803701
+                  </span>
+                  .
+                </p>
+              </div>
+            </article>
           </div>
         )}
-      </div>
-
-      {/* Two Ground-Truth Guarantee Cards (Below the Map) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card 1: 2-Year DLP Warranty */}
-        <article className="surface-panel p-6 flex items-start gap-4">
-          <div className="w-10 h-10 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0">
-            <Trees className="w-5 h-5" />
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h3 className="text-base font-medium text-[var(--foreground)]">
-                2-Year DLP Warranty
-              </h3>
-              <StatusBadge tone="healthy">Zero Resident Cost</StatusBadge>
-            </div>
-            <p className="text-sm text-[var(--muted)] leading-relaxed">
-              14-day mandatory sapling replacement and an 85% minimum canopy
-              survival benchmark enforced throughout the 24-month Defect
-              Liability Period at zero cost to homebuyers.
-            </p>
-          </div>
-        </article>
-
-        {/* Card 2: Arbitrum Sepolia Seal */}
-        <article className="surface-panel p-6 flex items-start gap-4">
-          <div className="w-10 h-10 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--verification)] shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div className="space-y-1.5 min-w-0">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h3 className="text-base font-medium text-[var(--foreground)]">
-                Arbitrum Sepolia Seal
-              </h3>
-              <StatusBadge tone="verified">On-Chain Proof</StatusBadge>
-            </div>
-            <p className="text-sm text-[var(--muted)] leading-relaxed">
-              Cryptographic proof-of-work hash verification for every planting
-              quota and maintenance cycle, anchored to contract{' '}
-              <a
-                href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-xs text-[var(--verification)] hover:underline break-all"
-              >
-                0x685049b310922F6bc8d6FA17ddae010E13803701
-              </a>
-              .
-            </p>
-          </div>
-        </article>
       </div>
     </div>
   );

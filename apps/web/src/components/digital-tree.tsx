@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { ArrowDown, ArrowUpRight, Fingerprint } from "lucide-react";
+import { ArrowUpRight, Fingerprint } from "lucide-react";
 import type { SceneController } from "./tree-scene";
 import { demoTreeIdentity, TreePassport } from "./tree-passport";
 
@@ -15,8 +14,6 @@ function StaticTree({ hidden }: { hidden: boolean }) {
       {Array.from({ length: 500 }, (_, i) => {
         const angle = i * 2.39996;
         const radius = Math.sqrt(((i * 137) % 499) / 499);
-        // Fixed SVG precision keeps server/browser Math implementations from
-        // producing different attribute strings during hydration.
         return <circle key={i} cx={(400 + Math.cos(angle) * radius * 205).toFixed(3)} cy={(265 + Math.sin(angle) * radius * 165).toFixed(3)} r={(.7 + (i % 3) * .3).toFixed(2)} fill={i % 4 ? "var(--accent)" : "var(--accent-soft)"} opacity={(.25 + (i % 5) * .13).toFixed(2)} />;
       })}
     </svg>
@@ -30,12 +27,9 @@ export function DigitalTree() {
   const playbackPaused = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "fallback" | "reduced" | "lightweight">("loading");
   const [passportOpen, setPassportOpen] = useState(false);
-  const [controlsHost, setControlsHost] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const story = canvasRef.current?.closest<HTMLElement>(".cinematic-story");
-    let active = true;
-    queueMicrotask(() => { if (active && story) setControlsHost(story); });
     const hero = story?.querySelector(".hero");
     if (!hero) return;
     const identity = identityRef.current;
@@ -70,7 +64,6 @@ export function DigitalTree() {
     window.addEventListener("resize", measure);
     measure();
     return () => {
-      active = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("scroll", onScroll);
@@ -110,22 +103,6 @@ export function DigitalTree() {
     return () => { disposed = true; generation++; media.removeEventListener("change", configure); controller.current?.dispose(); controller.current = null; };
   }, []);
 
-  const controls = <div className="scene-controls">
-    <a href="#record" className="scroll-cue" onClick={(event) => {
-      const headerBottom = document.querySelector(".site-header")?.getBoundingClientRect().bottom ?? 0;
-      const next = ["record", "intelligence", "lifecycle", "community"]
-        .map((id) => document.getElementById(id))
-        .find((section) => section && section.getBoundingClientRect().top > headerBottom + 48);
-      if (!next) return;
-      event.preventDefault();
-      next.tabIndex = -1;
-      next.focus({ preventScroll: true });
-      window.history.pushState(window.history.state, "", `#${next.id}`);
-      next.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
-    }}><span><ArrowDown size={15} aria-hidden="true" /></span>Follow the story</a>
-    <span className="scene-status" role="status">{status === "loading" ? "Preparing the digital tree · illustrative, not live data" : status === "fallback" ? "Static illustration · 3D unavailable · not live data" : status === "reduced" ? "Static illustration · reduced motion · not live data" : status === "lightweight" ? "Lightweight illustration · not live data" : "Illustrative tree and township · not live data"}</span>
-  </div>;
-
   return (
     <div className={`digital-tree is-${status}`}>
       <StaticTree hidden={status === "ready"} />
@@ -137,7 +114,6 @@ export function DigitalTree() {
         <dl><div><dt>Tree ID</dt><dd>{demoTreeIdentity.id}</dd></div><div><dt>Health status</dt><dd>{demoTreeIdentity.health}</dd></div><div><dt>Verification</dt><dd>{demoTreeIdentity.verification}</dd></div></dl>
         <button type="button" onClick={() => setPassportOpen(true)} aria-haspopup="dialog" aria-controls="tree-passport">Open Tree Passport <ArrowUpRight size={15} aria-hidden="true" /></button>
       </aside>
-      {controlsHost ? createPortal(controls, controlsHost) : controls}
       <TreePassport open={passportOpen} onClose={() => setPassportOpen(false)} />
     </div>
   );

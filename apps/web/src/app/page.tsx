@@ -9,7 +9,6 @@ import {
   MapPin,
   QrCode,
   ShieldCheck,
-  Trees,
   Users,
 } from "lucide-react";
 import { DigitalTree } from "@/components/digital-tree";
@@ -252,30 +251,8 @@ export default function Home() {
           id="ledger"
           aria-labelledby="ledger-title"
         >
-          <div className="ledger-container" data-reveal>
-            <div className="ledger-heading">
-              <Trees
-                className="chapter-icon"
-                size={29}
-                strokeWidth={1.3}
-                aria-hidden="true"
-              />
-              <SectionHeading
-                id="ledger-title"
-                label="04 / The living ledger"
-              >
-                Every promise planted.
-                <br />
-                Every warranty sealed.
-              </SectionHeading>
-              <p className="ledger-lead">
-                Pre-handover green quota audits and 2-year defect liability
-                period tracking for City of Elmina homebuyers.
-              </p>
-            </div>
-            <div className="ledger-frame">
-              <TownshipTransparencyExplorer />
-            </div>
+          <div className="ledger-container">
+            <TownshipTransparencyExplorer showEditorialIntro />
           </div>
         </section>
 
