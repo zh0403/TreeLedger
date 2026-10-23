@@ -53,7 +53,7 @@ export default function Home() {
     };
   }, []);
 
-  const targetPath = deviceType === "mobile" ? "/app/explore" : "/admin";
+  const targetPath = "/app";
 
   return (
     <div className="landing">
@@ -94,8 +94,8 @@ export default function Home() {
                   digital ecosystem.
                 </p>
                 <div className="hero-actions">
-                  <ButtonLink href="#workspaces">
-                    Explore TreeLedger{" "}
+                  <ButtonLink href="/app">
+                    Launch TreeLedger{" "}
                     <ArrowRight size={17} aria-hidden="true" />
                   </ButtonLink>
                   <ButtonLink href="/map" variant="secondary">

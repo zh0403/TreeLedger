@@ -1,4 +1,3 @@
-import { ArrowUpRight } from "lucide-react";
 import { Brand } from "./ui/brand";
 import { Navigation, NavigationLink } from "./ui/navigation";
 
@@ -12,9 +11,6 @@ export function SiteHeader() {
         <NavigationLink href="/#community">The community</NavigationLink>
         <NavigationLink href="/map">Live Map</NavigationLink>
       </Navigation>
-      <a className="header-link" href="/#workspaces">
-        Explore platform <ArrowUpRight size={15} aria-hidden="true" />
-      </a>
     </header>
   );
 }
