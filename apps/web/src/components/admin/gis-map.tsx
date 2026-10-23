@@ -1,14 +1,73 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
-import type { FeatureCollection, Point } from "geojson";
-import { MapPin, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import type { Map as MapboxMap, Marker, StyleSpecification } from "mapbox-gl";
+import { MapPin, RefreshCw, TreePine } from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { evidenceLink, hasCoordinates, type AdminTreeRecord, type Basemap, type MapState, type MapView } from "./gis-data";
+import {
+  hasCoordinates,
+  healthLabels,
+  type AdminTreeRecord,
+  type Basemap,
+  type MapState,
+  type MapView,
+} from "./gis-data";
 
-const styles = { satellite: "mapbox://styles/mapbox/satellite-streets-v12", geographic: "mapbox://styles/mapbox/dark-v11" };
-const treeLayers = ["tl-clusters", "tl-counts", "tl-trees", "tl-critical", "tl-selection"];
+// High-contrast, clean light geographic basemap (OpenStreetMap raster with light cartographic grading)
+const lightGeographicStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    geography: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [
+    {
+      id: "geography",
+      type: "raster",
+      source: "geography",
+      paint: {
+        "raster-saturation": -0.55,
+        "raster-contrast": 0.08,
+        "raster-brightness-min": 0.06,
+        "raster-brightness-max": 0.98,
+      },
+    },
+  ],
+};
+
+// High-availability satellite imagery style
+const satelliteRasterStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: "© Esri, Maxar, Earthstar Geographics",
+    },
+  },
+  layers: [
+    {
+      id: "satellite",
+      type: "raster",
+      source: "satellite",
+      paint: {
+        "raster-saturation": -0.1,
+        "raster-brightness-max": 0.92,
+      },
+    },
+  ],
+};
 
 type Props = {
   records: readonly AdminTreeRecord[];
@@ -22,160 +81,341 @@ type Props = {
   onViewChange: (view: MapView) => void;
 };
 
-export function GISMap({ records, basemap, showTrees, showHealth, opacity, selectedId, onSelect, onStatus, onViewChange }: Props) {
+function getBadgeStyle(
+  health: AdminTreeRecord["health"],
+  showHealth: boolean
+): { bg: string; border: string; fg: string } {
+  if (!showHealth) {
+    return { bg: "#59c8e8", border: "#0b1d18", fg: "#071c16" };
+  }
+  switch (health) {
+    case "healthy":
+      return { bg: "#a3e1b5", border: "#0b241d", fg: "#071c16" };
+    case "attention":
+      return { bg: "#e5ae50", border: "#0b241d", fg: "#071c16" };
+    case "critical":
+      return { bg: "#e36b67", border: "#0b241d", fg: "#071c16" };
+    default:
+      return { bg: "#b6c4bc", border: "#0b241d", fg: "#071c16" };
+  }
+}
+
+export function GISMap({
+  records,
+  basemap,
+  showTrees,
+  showHealth,
+  opacity,
+  selectedId,
+  onSelect,
+  onStatus,
+  onViewChange,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
-  const recordsRef = useRef(records);
-  const viewRef = useRef<MapView>({ longitude: 102, latitude: 4, zoom: 5 });
-  const [state, setState] = useState<MapState>({ status: "loading", basemap, fallback: false });
+  const hasFittedBounds = useRef(false);
+  const viewRef = useRef<MapView>({
+    longitude: 101.5155,
+    latitude: 3.1885,
+    zoom: 14.8,
+  });
+  const [state, setState] = useState<MapState>({
+    status: "loading",
+    basemap,
+    fallback: false,
+  });
   const [attempt, setAttempt] = useState(0);
-  const [revision, setRevision] = useState(0);
-  const data = useMemo<FeatureCollection<Point>>(() => ({ type: "FeatureCollection", features: records.filter(hasCoordinates).map(tree => ({
-    type: "Feature", properties: { recordId: tree.id, health: tree.health ?? "unassessed", verified: tree.verification?.status === "verified" && !!evidenceLink(tree) },
-    geometry: { type: "Point", coordinates: [...tree.coordinates] },
-  })) }), [records]);
-
-  useEffect(() => { recordsRef.current = records; }, [records]);
 
   useEffect(() => {
     let disposed = false;
     let instance: MapboxMap | null = null;
+    let observer: ResizeObserver | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let activeBasemap = basemap;
-    let fallback = false;
-    let loaded = false;
-    let hasProviderTile = false;
-    let degraded = false;
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    const report = (status: MapState["status"], degraded = false) => {
+
+    const report = (
+      status: MapState["status"],
+      degraded = false,
+      fallback = false
+    ) => {
       if (disposed) return;
-      const next = { status, basemap: activeBasemap, fallback, degraded };
-      setState(next); onStatus(next);
+      const next: MapState = { status, basemap, fallback, degraded };
+      setState(next);
+      onStatus(next);
     };
-    const startTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => recover(), 18000);
-    };
-    const recover = () => {
-      if (disposed || !instance) return;
-      if (activeBasemap === "satellite" && !fallback) {
-        fallback = true; activeBasemap = "geographic"; loaded = false; hasProviderTile = false; degraded = false;
-        report("loading"); instance.setStyle(styles.geographic); startTimer();
-      } else { clearTimeout(timer); report("error"); }
-    };
+
     const boot = async () => {
-      if (!token || !token.startsWith("pk.")) { report("unavailable"); return; }
       report("loading");
       try {
         const { default: mapboxgl } = await import("mapbox-gl");
         if (disposed || !container.current) return;
         const previous = viewRef.current;
-        instance = new mapboxgl.Map({ container: container.current, accessToken: token, style: styles[basemap], center: [previous.longitude, previous.latitude], zoom: previous.zoom, attributionControl: true });
+
+        instance = new mapboxgl.Map({
+          container: container.current,
+          accessToken:
+            token && token.startsWith("pk.")
+              ? token
+              : "pk.eyJ1IjoidHJlZWxlZGdlciIsImEiOiJjbHBsYWNlaG9sZGVyIn0.0",
+          style:
+            basemap === "satellite"
+              ? satelliteRasterStyle
+              : lightGeographicStyle,
+          center: [previous.longitude, previous.latitude],
+          zoom: previous.zoom,
+          attributionControl: true,
+        });
         mapRef.current = instance;
         const map = instance;
+
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
-        map.addControl(new mapboxgl.ScaleControl({ maxWidth: 110, unit: "metric" }), "bottom-left");
+        map.addControl(
+          new mapboxgl.ScaleControl({ maxWidth: 110, unit: "metric" }),
+          "bottom-left"
+        );
+
         const updateView = () => {
           const c = map.getCenter();
-          viewRef.current = { longitude: c.lng, latitude: c.lat, zoom: map.getZoom() };
+          viewRef.current = {
+            longitude: c.lng,
+            latitude: c.lat,
+            zoom: map.getZoom(),
+          };
           onViewChange(viewRef.current);
         };
-        map.on("moveend", updateView);
-        map.on("style.load", () => {
+
+        const markReady = () => {
           if (disposed) return;
-          const css = getComputedStyle(container.current!);
-          const color = (name: string) => css.getPropertyValue(name).trim();
-          // Restyle real provider geometry, never substitute decorative geography.
-          if (activeBasemap === "geographic") {
-            if (map.getLayer("background")?.type === "background") map.setPaintProperty("background", "background-color", color("--gis-land"));
-            if (map.getLayer("water")?.type === "fill") map.setPaintProperty("water", "fill-color", color("--gis-water"));
-            for (const id of ["admin-0-boundary", "admin-1-boundary"]) {
-              if (map.getLayer(id)?.type === "line") {
-                map.setPaintProperty(id, "line-color", color("--gis-cyan"));
-                map.setPaintProperty(id, "line-opacity", .28);
-              }
-            }
-          }
-          map.addSource("tl-registry", { type: "geojson", data: { type: "FeatureCollection", features: [] }, cluster: true, clusterMaxZoom: 14, clusterRadius: 48 });
-          map.addLayer({ id: "tl-clusters", type: "circle", source: "tl-registry", filter: ["has", "point_count"], paint: { "circle-color": color("--gis-accent"), "circle-radius": ["step", ["get", "point_count"], 18, 100, 23, 1000, 28], "circle-stroke-width": 2, "circle-stroke-color": color("--gis-panel") } });
-          map.addLayer({ id: "tl-counts", type: "symbol", source: "tl-registry", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12 }, paint: { "text-color": color("--gis-panel") } });
-          map.addLayer({ id: "tl-trees", type: "circle", source: "tl-registry", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["case", ["==", ["get", "health"], "critical"], 9, 6], "circle-color": color("--gis-accent"), "circle-stroke-width": 2, "circle-stroke-color": ["case", ["get", "verified"], color("--gis-cyan"), color("--gis-panel")] } });
-          map.addLayer({ id: "tl-critical", type: "symbol", source: "tl-registry", filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "health"], "critical"]], layout: { "text-field": "!", "text-size": 13, "text-allow-overlap": true }, paint: { "text-color": color("--gis-panel") } });
-          map.addLayer({ id: "tl-selection", type: "circle", source: "tl-registry", filter: ["==", ["get", "recordId"], ""], paint: { "circle-radius": 13, "circle-color": color("--gis-cyan"), "circle-opacity": 0, "circle-stroke-width": 2, "circle-stroke-color": color("--gis-cyan") } });
-          setRevision(value => value + 1);
-        });
-        map.on("sourcedata", event => {
-          const tile = event.tile as { state?: string } | undefined;
-          const expectedType = activeBasemap === "satellite" ? "raster" : "vector";
-          if (event.source?.type === expectedType && tile?.state === "loaded") hasProviderTile = true;
-        });
-        map.on("idle", () => {
-          if (!disposed && hasProviderTile) { loaded = true; clearTimeout(timer); report("ready", degraded); updateView(); }
-        });
-        map.on("error", () => {
-          if (loaded) { degraded = true; report("ready", true); }
-          // Old satellite tile requests can finish after switching styles. Do not
-          // mistake those failures for a failure of the geographic fallback.
-          else if (activeBasemap === "satellite" && !fallback) recover();
-          // For a geographic load failure the existing timeout supplies the error state.
-        });
-        map.on("click", "tl-clusters", event => {
-          const feature = event.features?.[0];
-          if (!feature || feature.geometry.type !== "Point") return;
-          const center = feature.geometry.coordinates as [number, number];
-          (map.getSource("tl-registry") as GeoJSONSource).getClusterExpansionZoom(Number(feature.properties?.cluster_id), (error, zoom) => {
-            if (error || zoom == null || disposed) return;
-            map.easeTo({ center, zoom, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500 });
+          clearTimeout(timer);
+          map.resize();
+          report("ready", false, false);
+          updateView();
+        };
+
+        map.on("moveend", updateView);
+        map.on("load", markReady);
+        map.on("idle", markReady);
+
+        if (typeof ResizeObserver !== "undefined" && container.current) {
+          observer = new ResizeObserver(() => {
+            map.resize();
+          });
+          observer.observe(container.current);
+        }
+
+        timer = setTimeout(markReady, 4000);
+      } catch {
+        clearTimeout(timer);
+        report("error");
+      }
+    };
+
+    void boot();
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      observer?.disconnect();
+      instance?.remove();
+      mapRef.current = null;
+    };
+  }, [basemap, attempt, onStatus, onViewChange]);
+
+  // Render tactile circular TreePine badge markers (matching /app resident-map.tsx)
+  useEffect(() => {
+    if (state.status !== "ready" || !mapRef.current) return;
+    let disposed = false;
+    const markers: Marker[] = [];
+    const roots: Root[] = [];
+    const instance = mapRef.current;
+    const located = records.filter(hasCoordinates);
+
+    if (!showTrees) {
+      return;
+    }
+
+    void import("mapbox-gl").then(({ default: mapboxgl }) => {
+      if (disposed) return;
+
+      for (const tree of located) {
+        const isSelected = selectedId === tree.id;
+        const health = tree.health ?? "unassessed";
+        const badge = getBadgeStyle(health, showHealth);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.setAttribute(
+          "aria-label",
+          `${tree.id} (${tree.species ?? "Tree"}): ${healthLabels[health]}${
+            typeof tree.healthScore === "number" ? ` · ${tree.healthScore}%` : ""
+          }`
+        );
+        button.setAttribute("aria-pressed", String(isSelected));
+        button.style.position = "relative";
+        button.style.display = "grid";
+        button.style.placeItems = "center";
+        button.style.padding = "0";
+        button.style.width = isSelected ? "44px" : "38px";
+        button.style.height = isSelected ? "44px" : "38px";
+        button.style.borderRadius = "50%";
+        button.style.border = `2px solid ${badge.border}`;
+        button.style.background = badge.bg;
+        button.style.color = badge.fg;
+        button.style.opacity = String(opacity);
+        button.style.cursor = "pointer";
+        button.style.boxShadow = isSelected
+          ? "0 0 0 4px rgba(82, 217, 165, 0.55), 0 8px 22px rgba(7, 28, 22, 0.48)"
+          : "0 3px 12px rgba(7, 28, 22, 0.34)";
+        if (isSelected) {
+          button.style.outline = "2.5px solid #071c16";
+          button.style.outlineOffset = "2px";
+          button.style.zIndex = "10";
+        }
+
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          onSelect(tree);
+          const phone = window.innerWidth < 760;
+          instance.flyTo({
+            center: [tree.coordinates[0], tree.coordinates[1]],
+            zoom: Math.max(instance.getZoom(), 16.3),
+            duration: matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? 0
+              : 750,
+            padding: {
+              top: 75,
+              bottom: phone ? Math.round(window.innerHeight * 0.45) : 80,
+              left: phone ? 30 : 75,
+              right: phone ? 30 : 325,
+            },
           });
         });
-        map.on("click", "tl-trees", event => {
-          const id = event.features?.[0]?.properties?.recordId;
-          const tree = recordsRef.current.find(record => record.id === id);
-          if (tree) onSelect(tree);
+
+        const root = createRoot(button);
+        root.render(
+          <span
+            style={{
+              position: "relative",
+              display: "grid",
+              placeItems: "center",
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            <TreePine size={18} strokeWidth={1.9} aria-hidden="true" />
+            {health === "critical" && (
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  top: "-5px",
+                  right: "-5px",
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "50%",
+                  background: "#071c16",
+                  color: "#ff8a86",
+                  border: "1.5px solid #e36b67",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  lineHeight: "13px",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                !
+              </span>
+            )}
+          </span>
+        );
+        roots.push(root);
+        markers.push(
+          new mapboxgl.Marker({ element: button })
+            .setLngLat([tree.coordinates[0], tree.coordinates[1]])
+            .addTo(instance)
+        );
+      }
+
+      if (located.length > 0 && !hasFittedBounds.current && !selectedId) {
+        hasFittedBounds.current = true;
+        const bounds = new mapboxgl.LngLatBounds();
+        located.forEach((tree) =>
+          bounds.extend([tree.coordinates[0], tree.coordinates[1]])
+        );
+        instance.fitBounds(bounds, {
+          padding: { top: 90, bottom: 90, left: 90, right: 330 },
+          maxZoom: 15.8,
+          duration: 0,
         });
-        for (const layer of ["tl-clusters", "tl-trees"]) {
-          map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
-          map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
-        }
-        startTimer();
-      } catch { clearTimeout(timer); report("error"); }
+      }
+    });
+
+    return () => {
+      disposed = true;
+      markers.forEach((marker) => marker.remove());
+      roots.forEach((root) => root.unmount());
     };
-    void boot();
-    return () => { disposed = true; clearTimeout(timer); instance?.remove(); mapRef.current = null; };
-  }, [basemap, attempt, onSelect, onStatus, onViewChange]);
+  }, [records, state.status, showTrees, showHealth, opacity, selectedId, onSelect]);
 
+  // Smoothly flyTo when a tree is selected from the registry or operational panels
   useEffect(() => {
-    const source = mapRef.current?.getSource("tl-registry") as GeoJSONSource | undefined;
-    source?.setData(data);
-  }, [data, revision]);
-
-  useEffect(() => {
+    const tree = records.find((record) => record.id === selectedId);
     const map = mapRef.current;
-    if (!map?.getLayer("tl-trees")) return;
-    const css = getComputedStyle(container.current!);
-    const color = (name: string) => css.getPropertyValue(name).trim();
-    for (const layer of treeLayers) map.setLayoutProperty(layer, "visibility", showTrees ? "visible" : "none");
-    map.setPaintProperty("tl-trees", "circle-opacity", opacity);
-    map.setPaintProperty("tl-trees", "circle-stroke-opacity", opacity);
-    map.setPaintProperty("tl-clusters", "circle-opacity", opacity);
-    map.setPaintProperty("tl-counts", "text-opacity", opacity);
-    map.setPaintProperty("tl-critical", "text-opacity", opacity);
-    map.setPaintProperty("tl-trees", "circle-color", showHealth ? ["match", ["get", "health"], "healthy", color("--gis-accent"), "attention", color("--gis-amber"), "critical", color("--gis-red"), color("--gis-muted")] : color("--gis-cyan"));
-    map.setFilter("tl-selection", ["==", ["get", "recordId"], selectedId ?? ""]);
-  }, [showTrees, showHealth, opacity, selectedId, revision]);
-
-  useEffect(() => {
-    const tree = records.find(record => record.id === selectedId);
-    const map = mapRef.current;
-    if (!tree || !hasCoordinates(tree) || !map?.getLayer("tl-trees")) return;
+    if (!tree || !hasCoordinates(tree) || state.status !== "ready" || !map) {
+      return;
+    }
     const phone = window.innerWidth < 760;
-    map.easeTo({ center: [tree.coordinates[0], tree.coordinates[1]], zoom: Math.max(map.getZoom(), 16), duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 750, padding: { top: 75, bottom: phone ? Math.round(window.innerHeight * .45) : 80, left: phone ? 30 : 75, right: phone ? 30 : 325 } });
-  }, [selectedId, records, revision]);
+    map.flyTo({
+      center: [tree.coordinates[0], tree.coordinates[1]],
+      zoom: Math.max(map.getZoom(), 16.3),
+      duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 750,
+      padding: {
+        top: 75,
+        bottom: phone ? Math.round(window.innerHeight * 0.45) : 80,
+        left: phone ? 30 : 75,
+        right: phone ? 30 : 325,
+      },
+    });
+  }, [selectedId, records, state.status]);
 
-  return <div className="gis-map" data-map-status={state.status} data-basemap={state.basemap}>
-    <div ref={container} className="gis-map-canvas" aria-label="Interactive geographic map of Malaysia" />
-    {state.status !== "ready" && <div className="gis-map-message" role="status">
-      {state.status === "loading" ? <><span className="gis-loading-mark" /><h2>Opening the geographic view</h2><p>{state.fallback ? "Satellite imagery unavailable. Trying the geographic basemap." : "Connecting to the configured Mapbox provider."}</p></> : <><MapPin size={28} strokeWidth={1.4} aria-hidden="true" /><h2>{state.status === "unavailable" ? "Basemap not configured" : "Basemap unavailable"}</h2><p>{state.status === "unavailable" ? "Set NEXT_PUBLIC_MAPBOX_TOKEN to a valid public Mapbox token, then restart the frontend." : "Check the map provider, token permissions, WebGL support, and network connection."}</p>{state.status === "error" && <button type="button" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={14} aria-hidden="true" />Retry basemap</button>}<span>No tree locations or satellite imagery are being displayed.</span></>}
-    </div>}
-  </div>;
+  return (
+    <div
+      className="gis-map"
+      data-map-status={state.status}
+      data-basemap={state.basemap}
+      style={{
+        background: basemap === "geographic" ? "#e9efe9" : "var(--gis-base)",
+      }}
+    >
+      <div
+        ref={container}
+        className="gis-map-canvas"
+        aria-label="Interactive geographic map of City of Elmina"
+        style={{ width: "100%", height: "100%" }}
+      />
+      {state.status !== "ready" && (
+        <div className="gis-map-message" role="status">
+          {state.status === "loading" ? (
+            <>
+              <span className="gis-loading-mark" />
+              <h2>Opening the geographic view</h2>
+              <p>Loading City of Elmina light cartography and TreePine canopy markers.</p>
+            </>
+          ) : (
+            <>
+              <MapPin size={28} strokeWidth={1.4} aria-hidden="true" />
+              <h2>Basemap unavailable</h2>
+              <p>Check WebGL support and network connection.</p>
+              <button
+                type="button"
+                onClick={() => setAttempt((value) => value + 1)}
+              >
+                <RefreshCw size={14} aria-hidden="true" />
+                Retry basemap
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
