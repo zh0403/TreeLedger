@@ -452,6 +452,15 @@ const DEFAULT_40_TREES: readonly AdminTreeRecord[] =
   buildElmina40Registry(INITIAL_TREES);
 const emptyRecords: readonly AdminTreeRecord[] = [];
 
+const mobileNavLabels: Record<string, string> = {
+  overview: "Overview",
+  trees: "Trees",
+  maintenance: "Tasks",
+  hazards: "Hazards",
+  sla: "SLA",
+  insights: "Insights",
+};
+
 export function AdminCommandCenter({
   view,
   trees = DEFAULT_40_TREES,
@@ -751,7 +760,12 @@ export function AdminCommandCenter({
                     strokeWidth={isActive ? 2 : 1.5}
                     aria-hidden="true"
                   />
-                  <span>{item.label}</span>
+                  <span className="gis-tool-label">
+                    <span className="gis-tool-label-desktop">{item.label}</span>
+                    <span className="gis-tool-label-mobile">
+                      {mobileNavLabels[item.view] ?? item.label}
+                    </span>
+                  </span>
                 </button>
               </div>
             );
@@ -763,7 +777,10 @@ export function AdminCommandCenter({
           title="Operations prototype"
         >
           <ArrowUpRight size={19} aria-hidden="true" />
-          <span>Operations prototype</span>
+          <span className="gis-tool-label">
+            <span className="gis-tool-label-desktop">Operations prototype</span>
+            <span className="gis-tool-label-mobile">Ops</span>
+          </span>
         </NavigationLink>
       </Navigation>
 
@@ -1143,33 +1160,38 @@ export function AdminCommandCenter({
           </section>
         ) : (
           <>
-            {/* Google Maps-Style Unified Left Side Panel + Middle Edge Collapse/Expand Tab Handle */}
+            {/* Mobile Bottom Sheet Backdrop (tap to dismiss sheet on mobile) */}
+            {leftPanelOpen && (
+              <div
+                className="gis-sheet-backdrop"
+                aria-hidden="true"
+                onClick={() => setLeftPanelOpen(false)}
+              />
+            )}
+
+            {/* Google Maps-Style Unified Left Side Panel (Desktop) / Bottom Sheet (Mobile) */}
             <aside
               id="gis-unified-panel"
               className="gis-unified-panel"
+              data-open={leftPanelOpen ? "true" : "false"}
               aria-label="Township operations side panel"
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: "33px",
-                left: 0,
-                zIndex: 5,
-                width: "min(380px, calc(100% - 44px))",
-                display: "flex",
-                flexDirection: "column",
-                background: "color-mix(in srgb, var(--gis-panel) 97%, transparent)",
-                backdropFilter: "blur(16px)",
-                borderRight: "1px solid var(--gis-border)",
-                boxShadow: leftPanelOpen
-                  ? "10px 0 32px rgba(2, 11, 19, 0.42)"
-                  : "none",
-                transform: leftPanelOpen ? "translateX(0)" : "translateX(-100%)",
-                transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
-              }}
             >
-              {/* Google Maps-style Middle Edge Collapse / Expand Handle */}
+              {/* Google Maps Mobile Drag Handle Pill */}
               <button
                 type="button"
+                className="gis-sheet-drag-handle"
+                onClick={() => setLeftPanelOpen((open) => !open)}
+                aria-label={
+                  leftPanelOpen ? "Collapse bottom sheet" : "Expand bottom sheet"
+                }
+              >
+                <span />
+              </button>
+
+              {/* Google Maps Desktop Middle Edge Collapse / Expand Handle */}
+              <button
+                type="button"
+                className="gis-panel-edge-handle"
                 onClick={() => setLeftPanelOpen((open) => !open)}
                 aria-label={
                   leftPanelOpen
@@ -1181,24 +1203,6 @@ export function AdminCommandCenter({
                     ? "Collapse side panel"
                     : "Expand side panel"
                 }
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  right: "-44px",
-                  transform: "translateY(-50%)",
-                  width: "44px",
-                  height: "56px",
-                  display: "grid",
-                  placeItems: "center",
-                  padding: 0,
-                  border: "1px solid var(--gis-border)",
-                  borderLeft: 0,
-                  borderRadius: "0 10px 10px 0",
-                  background: "var(--gis-panel)",
-                  color: "var(--gis-text)",
-                  boxShadow: "6px 0 18px rgba(0, 0, 0, 0.32)",
-                  cursor: "pointer",
-                }}
               >
                 {leftPanelOpen ? (
                   <ChevronLeft size={16} aria-hidden="true" />
@@ -1290,27 +1294,6 @@ export function AdminCommandCenter({
             <section
               className="gis-map-control-card"
               aria-label="Map layers and TreePine badge legend"
-              style={{
-                position: "absolute",
-                right: "12px",
-                bottom: "42px",
-                zIndex: 5,
-                width: "244px",
-                maxWidth: "calc(100vw - 24px)",
-                border: "1px solid var(--gis-border)",
-                borderRadius: "10px",
-                background:
-                  "color-mix(in srgb, var(--gis-panel) 95%, transparent)",
-                backdropFilter: "blur(12px)",
-                boxShadow: "0 6px 20px rgba(2, 11, 19, 0.36)",
-                padding: "8px 10px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "7px",
-                color: "var(--gis-text)",
-                fontSize: "10px",
-                lineHeight: 1.3,
-              }}
             >
               {/* Top Control Row: Basemap Quick Toggle + Expandable Layers Toggle */}
               <div
