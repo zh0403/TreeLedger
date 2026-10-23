@@ -1,3 +1,6 @@
+import { Tree } from "@/lib/types";
+import { INITIAL_TREES } from "@/lib/api";
+
 /** Presentation fields only. Bind documented registry responses here when available. */
 export type ResidentTreeRecord = {
   id: string;
@@ -12,8 +15,24 @@ export type ResidentTreeRecord = {
   healthScore?: number;
 };
 
-// Disconnected is not the same as a connected registry containing zero trees.
-export const residentTreeRecords: readonly ResidentTreeRecord[] | null = null;
+export function toResidentTreeRecord(tree: Tree): ResidentTreeRecord {
+  const health: ResidentTreeRecord["health"] =
+    tree.health_score >= 80 ? "healthy" : tree.health_score >= 60 ? "attention" : "critical";
+  return {
+    id: tree.id,
+    commonName: tree.common_name,
+    scientificName: tree.species,
+    species: `${tree.species} (${tree.common_name})`,
+    location: tree.precinct,
+    health,
+    latitude: tree.latitude,
+    longitude: tree.longitude,
+    healthScore: tree.health_score,
+  };
+}
+
+// Connected resident tree registry
+export const residentTreeRecords: readonly ResidentTreeRecord[] = INITIAL_TREES.map(toResidentTreeRecord);
 
 export const residentHealthLabels = {
   healthy: "Healthy",

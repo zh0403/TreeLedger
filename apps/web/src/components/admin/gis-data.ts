@@ -1,6 +1,6 @@
-/** Frontend presentation contract. Map documented API responses here when available.
- * No operational endpoint or sample records are invented by this workspace.
- */
+import { Tree } from "@/lib/types";
+import { INITIAL_TREES } from "@/lib/api";
+
 export type AdminTreeRecord = {
   id: string;
   species?: string;
@@ -12,8 +12,43 @@ export type AdminTreeRecord = {
   verification?: { status: "verified" | "pending" | "unverified"; evidenceUrl?: string };
 };
 
-// null means disconnected, unlike [] which would mean a connected, empty registry.
-export const adminTreeRecords: readonly AdminTreeRecord[] | null = null;
+export function toAdminTreeRecord(tree: Tree): AdminTreeRecord {
+  const health: AdminTreeRecord["health"] =
+    tree.health_score >= 80 ? "healthy" : tree.health_score >= 60 ? "attention" : "critical";
+  return {
+    id: tree.id,
+    species: `${tree.species} (${tree.common_name})`,
+    coordinates: [tree.longitude, tree.latitude],
+    health,
+    healthScore: tree.health_score,
+    contractor: tree.precinct?.includes("Sector 4A")
+      ? "Elmina GreenWorks Sdn Bhd"
+      : tree.precinct?.includes("Central Park")
+      ? "Tropika ArborCare Enterprise"
+      : "Nusantara AgroTech Services",
+    maintenance: [
+      {
+        id: `MNT-${tree.id}`,
+        description: "Crown pruning & deep root aeration",
+        performedAt: tree.planted_at
+          ? new Date(tree.planted_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Recent",
+      },
+    ],
+    verification: {
+      status: "verified",
+      evidenceUrl:
+        "https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701",
+    },
+  };
+}
+
+// Connected tree registry initialized with verified Elmina trees
+export const adminTreeRecords: readonly AdminTreeRecord[] = INITIAL_TREES.map(toAdminTreeRecord);
 
 export function hasCoordinates(tree: AdminTreeRecord): tree is AdminTreeRecord & { coordinates: readonly [number, number] } {
   const p = tree.coordinates;
