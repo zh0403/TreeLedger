@@ -76,6 +76,7 @@ type Props = {
   showHealth: boolean;
   opacity: number;
   selectedId?: string;
+  leftDrawerOpen?: boolean;
   onSelect: (tree: AdminTreeRecord) => void;
   onStatus: (state: MapState) => void;
   onViewChange: (view: MapView) => void;
@@ -107,6 +108,7 @@ export function GISMap({
   showHealth,
   opacity,
   selectedId,
+  leftDrawerOpen = true,
   onSelect,
   onStatus,
   onViewChange,
@@ -114,6 +116,7 @@ export function GISMap({
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const hasFittedBounds = useRef(false);
+  const leftOpenRef = useRef(leftDrawerOpen);
   const viewRef = useRef<MapView>({
     longitude: 101.5155,
     latitude: 3.1885,
@@ -125,6 +128,10 @@ export function GISMap({
     fallback: false,
   });
   const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    leftOpenRef.current = leftDrawerOpen;
+  }, [leftDrawerOpen]);
 
   useEffect(() => {
     let disposed = false;
@@ -171,7 +178,7 @@ export function GISMap({
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
         map.addControl(
           new mapboxgl.ScaleControl({ maxWidth: 110, unit: "metric" }),
-          "bottom-left"
+          "bottom-right"
         );
 
         const updateView = () => {
@@ -254,8 +261,8 @@ export function GISMap({
         button.style.display = "grid";
         button.style.placeItems = "center";
         button.style.padding = "0";
-        button.style.width = isSelected ? "44px" : "38px";
-        button.style.height = isSelected ? "44px" : "38px";
+        button.style.width = isSelected ? "46px" : "38px";
+        button.style.height = isSelected ? "46px" : "38px";
         button.style.borderRadius = "50%";
         button.style.border = `2px solid ${badge.border}`;
         button.style.background = badge.bg;
@@ -263,7 +270,7 @@ export function GISMap({
         button.style.opacity = String(opacity);
         button.style.cursor = "pointer";
         button.style.boxShadow = isSelected
-          ? "0 0 0 4px rgba(82, 217, 165, 0.55), 0 8px 22px rgba(7, 28, 22, 0.48)"
+          ? "0 0 0 5px rgba(82, 217, 165, 0.55), 0 8px 22px rgba(7, 28, 22, 0.48)"
           : "0 3px 12px rgba(7, 28, 22, 0.34)";
         if (isSelected) {
           button.style.outline = "2.5px solid #071c16";
@@ -274,20 +281,6 @@ export function GISMap({
         button.addEventListener("click", (event) => {
           event.stopPropagation();
           onSelect(tree);
-          const phone = window.innerWidth < 760;
-          instance.flyTo({
-            center: [tree.coordinates[0], tree.coordinates[1]],
-            zoom: Math.max(instance.getZoom(), 16.3),
-            duration: matchMedia("(prefers-reduced-motion: reduce)").matches
-              ? 0
-              : 750,
-            padding: {
-              top: 75,
-              bottom: phone ? Math.round(window.innerHeight * 0.45) : 80,
-              left: phone ? 30 : 75,
-              right: phone ? 30 : 325,
-            },
-          });
         });
 
         const root = createRoot(button);
@@ -337,12 +330,18 @@ export function GISMap({
 
       if (located.length > 0 && !hasFittedBounds.current && !selectedId) {
         hasFittedBounds.current = true;
+        const phone = window.innerWidth < 760;
         const bounds = new mapboxgl.LngLatBounds();
         located.forEach((tree) =>
           bounds.extend([tree.coordinates[0], tree.coordinates[1]])
         );
         instance.fitBounds(bounds, {
-          padding: { top: 90, bottom: 90, left: 90, right: 330 },
+          padding: {
+            top: 70,
+            bottom: 70,
+            left: !phone && leftOpenRef.current ? 430 : 70,
+            right: 70,
+          },
           maxZoom: 15.8,
           duration: 0,
         });
@@ -356,7 +355,7 @@ export function GISMap({
     };
   }, [records, state.status, showTrees, showHealth, opacity, selectedId, onSelect]);
 
-  // Smoothly flyTo when a tree is selected from the registry or operational panels
+  // Smoothly flyTo when a tree is selected, centering it in the visible area to the right of the left side panel
   useEffect(() => {
     const tree = records.find((record) => record.id === selectedId);
     const map = mapRef.current;
@@ -366,13 +365,13 @@ export function GISMap({
     const phone = window.innerWidth < 760;
     map.flyTo({
       center: [tree.coordinates[0], tree.coordinates[1]],
-      zoom: Math.max(map.getZoom(), 16.3),
-      duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 750,
+      zoom: Math.max(map.getZoom(), 16.4),
+      duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
       padding: {
-        top: 75,
-        bottom: phone ? Math.round(window.innerHeight * 0.45) : 80,
-        left: phone ? 30 : 75,
-        right: phone ? 30 : 325,
+        top: 64,
+        bottom: phone ? Math.round(window.innerHeight * 0.45) : 64,
+        left: !phone && leftOpenRef.current ? 420 : 64,
+        right: 64,
       },
     });
   }, [selectedId, records, state.status]);

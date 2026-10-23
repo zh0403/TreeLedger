@@ -8,14 +8,14 @@ import {
   Fingerprint,
   Layers3,
   Leaf,
-  PanelLeftClose,
-  PanelRightClose,
+  MapPin,
   Search,
   ShieldCheck,
   Sparkles,
   Trees,
   Unplug,
   Wrench,
+  X,
 } from "lucide-react";
 import type { WorkspaceView } from "../workspaces/config";
 import {
@@ -35,8 +35,8 @@ import {
 import type { HazardReport, MaintenanceRecord } from "@/lib/types";
 
 export const adminViewLabels: Partial<Record<WorkspaceView, string>> = {
-  overview: "Overview",
-  map: "Geographic view",
+  overview: "Township overview",
+  map: "Geographic explore",
   trees: "Tree registry",
   maintenance: "Maintenance",
   hazards: "Hazard reports",
@@ -142,258 +142,358 @@ function getSlaCountdown(hazard: HazardReport): {
   return { label: "72h Standard SLA · 51h 30m left", urgent: false };
 }
 
-export function IntelligencePanel({
-  trees,
+/**
+ * Google-Maps-style Place Card / Digital Tree Passport rendered inside the unified Left Side Panel
+ * whenever a user clicks a TreePine marker on the map or selects a tree from a list.
+ */
+export function TreePassportDetail({
   selected,
-  onClear,
-  onClose,
+  returnLabel,
+  hazards,
+  maintenanceRecords,
+  onBack,
   onNavigateView,
 }: {
-  trees: readonly AdminTreeRecord[] | null;
-  selected: AdminTreeRecord | null;
-  onClear: () => void;
-  onClose: () => void;
-  onNavigateView?: (view: WorkspaceView) => void;
+  selected: AdminTreeRecord;
+  returnLabel: string;
+  hazards: readonly HazardReport[];
+  maintenanceRecords: readonly MaintenanceRecord[];
+  onBack: () => void;
+  onNavigateView: (view: WorkspaceView) => void;
 }) {
-  const evidence = selected && evidenceLink(selected);
-  const avgHealth = useMemo(() => {
-    if (!trees || trees.length === 0) return 88;
-    const scored = trees.filter((t) => typeof t.healthScore === "number");
-    if (scored.length === 0) return 88;
-    return Math.round(
-      scored.reduce((acc, t) => acc + (t.healthScore ?? 88), 0) / scored.length
-    );
-  }, [trees]);
+  const evidence = evidenceLink(selected);
+  const treeHazards = hazards.filter((h) => h.tree_id === selected.id);
+  const treeMaintenance = maintenanceRecords.filter(
+    (m) => m.tree_id === selected.id
+  );
+
+  const toneColor =
+    selected.health === "healthy"
+      ? "var(--gis-accent)"
+      : selected.health === "attention"
+      ? "var(--gis-amber)"
+      : selected.health === "critical"
+      ? "#ff8a86"
+      : "var(--gis-muted)";
 
   return (
-    <aside
-      className="gis-intelligence gis-panel"
-      aria-labelledby="intelligence-panel-title"
-      id="gis-intelligence"
-    >
-      <header className="gis-panel-header">
-        <div>
-          {selected ? (
-            <Fingerprint size={17} aria-hidden="true" />
-          ) : (
-            <Trees size={17} aria-hidden="true" />
-          )}
-          <h2 id="intelligence-panel-title">
-            {selected ? "Digital Tree Passport" : "Township intelligence"}
-          </h2>
-        </div>
+    <div style={{ padding: "14px 0 18px" }}>
+      {/* Google Maps-style Back to Results Bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "8px",
+          paddingBottom: "12px",
+          marginBottom: "14px",
+          borderBottom: "1px solid var(--gis-border)",
+        }}
+      >
         <button
           type="button"
-          onClick={onClose}
-          aria-label="Collapse intelligence panel"
+          onClick={onBack}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            minHeight: "36px",
+            padding: "0 12px",
+            borderRadius: "999px",
+            border: "1px solid var(--gis-border)",
+            background: "var(--gis-secondary)",
+            color: "var(--gis-text)",
+            fontSize: "11px",
+            fontWeight: 500,
+          }}
         >
-          <PanelRightClose size={17} aria-hidden="true" />
+          <ArrowLeft size={14} aria-hidden="true" />
+          <span>Back to {returnLabel}</span>
         </button>
-      </header>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            fontSize: "10px",
+            color: "var(--gis-cyan)",
+          }}
+        >
+          <Fingerprint size={13} aria-hidden="true" />
+          Digital Tree Passport
+        </span>
+      </div>
+
+      {/* Tree Identity Hero Card */}
       <div
-        className="gis-panel-scroll"
-        tabIndex={0}
-        role="region"
-        aria-label={
-          selected ? "Selected tree details" : "Township intelligence summaries"
-        }
+        style={{
+          padding: "16px",
+          borderRadius: "14px",
+          border: "1px solid var(--gis-border)",
+          background: "var(--gis-secondary)",
+          marginBottom: "14px",
+        }}
       >
-        {selected ? (
-          <>
-            <button
-              type="button"
-              className="gis-text-button"
-              onClick={onClear}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "8px",
+            marginBottom: "6px",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-geist-mono), monospace",
+              fontSize: "11px",
+              color: "var(--gis-cyan)",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {selected.id}
+          </span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "3px 9px",
+              borderRadius: "999px",
+              background: "rgba(7, 28, 22, 0.75)",
+              border: `1px solid ${toneColor}`,
+              color: toneColor,
+              fontSize: "11px",
+              fontWeight: 600,
+            }}
+          >
+            <span
+              className={`gis-health-key gis-health-key--${
+                selected.health ?? "unassessed"
+              }`}
             >
-              <ArrowLeft size={14} aria-hidden="true" />
-              Township summary
-            </button>
-            <div className="gis-passport-id">
-              <span>Digital Tree ID</span>
-              <h3>{selected.id}</h3>
-              <p>{selected.species ?? "Species not provided"}</p>
-            </div>
-            <dl className="gis-passport-fields">
-              <div>
-                <dt>Health condition</dt>
-                <dd>{healthLabels[selected.health ?? "unassessed"]}</dd>
-              </div>
-              <div>
-                <dt>Health score</dt>
-                <dd>
-                  {typeof selected.healthScore === "number"
-                    ? `${selected.healthScore}%`
-                    : "Not provided"}
-                </dd>
-              </div>
-              <div>
-                <dt>Location (WGS84)</dt>
-                <dd>
-                  {hasCoordinates(selected)
-                    ? `${selected.coordinates[1].toFixed(5)}° N, ${selected.coordinates[0].toFixed(5)}° E`
-                    : "Not provided"}
-                </dd>
-              </div>
-              <div>
-                <dt>Contractor</dt>
-                <dd>{selected.contractor ?? "Not provided"}</dd>
-              </div>
-              <div>
-                <dt>Verification</dt>
-                <dd>
-                  {selected.verification?.status === "verified" && evidence
-                    ? "Verified on Arbitrum Sepolia"
-                    : selected.verification?.status === "pending"
-                    ? "Pending verification"
-                    : "No verified evidence available"}
-                </dd>
-              </div>
-            </dl>
-            <section className="gis-intelligence-section">
-              <h3>Maintenance history</h3>
-              {selected.maintenance?.length ? (
-                <ol className="gis-history">
-                  {selected.maintenance.map((entry) => (
-                    <li key={entry.id}>
-                      <p>{entry.description}</p>
-                      {entry.performedAt && <span>{entry.performedAt}</span>}
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p>No maintenance entries supplied.</p>
-              )}
-            </section>
-            {evidence && (
-              <a
-                className="gis-action-link"
-                href={evidence}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Verify on Arbitrum Sepolia{" "}
-                <ArrowUpRight size={14} aria-hidden="true" />
-              </a>
-            )}
-            <button
-              type="button"
-              className="gis-action-link"
-              style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
-              onClick={() => onNavigateView?.("maintenance")}
-            >
-              <span>Open maintenance workspace</span>
-              <ArrowUpRight size={14} aria-hidden="true" />
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="gis-source-label">
-              <span style={{ background: "var(--gis-accent)" }} />
-              {trees === null
-                ? "Operational records disconnected"
-                : "Connected Elmina GIS Registry"}
-            </div>
-            <section className="gis-intelligence-section gis-population">
-              <div className="gis-section-title">
-                <h3>Tree population</h3>
-                <Trees size={15} aria-hidden="true" />
-              </div>
-              <div className="gis-population-total">
-                <strong>{trees?.length.toLocaleString() ?? "40"}</strong>
-                <span>registered trees</span>
-              </div>
-              <Metric
-                label="Geolocated records"
-                value={trees?.filter(hasCoordinates).length ?? 40}
-              />
-              <Metric label="Average canopy health" value={`${avgHealth}%`} />
-            </section>
-            <section className="gis-intelligence-section">
-              <div className="gis-section-title">
-                <h3>Health distribution</h3>
-                <Leaf size={15} aria-hidden="true" />
-              </div>
-              <div className="gis-health-list">
-                {Object.entries(healthLabels)
-                  .filter(([key]) => key !== "unassessed")
-                  .map(([key, label]) => (
-                    <div key={key}>
-                      <span
-                        className={`gis-health-key gis-health-key--${key}`}
-                        aria-hidden="true"
-                      >
-                        {key === "critical" ? "!" : ""}
-                      </span>
-                      <span>{label}</span>
-                      <span>
-                        {trees?.filter(
-                          (tree) => (tree.health ?? "unassessed") === key
-                        ).length ?? "—"}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </section>
-            <section className="gis-intelligence-section">
-              <div className="gis-section-title">
-                <h3>Maintenance &amp; hazards</h3>
-                <Wrench size={15} aria-hidden="true" />
-              </div>
-              <Metric label="Active citizen hazards" value="3 open (2 critical)" />
-              <Metric label="Verified Arbitrum proofs" value="3 anchored" />
-              <button
-                type="button"
-                className="gis-action-link"
-                style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
-                onClick={() => onNavigateView?.("maintenance")}
-              >
-                <span>View maintenance proofs</span>
-                <ArrowUpRight size={13} aria-hidden="true" />
-              </button>
-            </section>
-            <section className="gis-intelligence-section">
-              <div className="gis-section-title">
-                <h3>SLA compliance</h3>
-                <ShieldCheck size={15} aria-hidden="true" />
-              </div>
-              <Metric label="Township compliance rate" value="94.7%" />
-              <Metric label="Active 10% SLA deductions" value="1 contractor" />
-              <button
-                type="button"
-                className="gis-action-link"
-                style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
-                onClick={() => onNavigateView?.("sla")}
-              >
-                <span>Inspect contractor SLAs</span>
-                <ArrowUpRight size={13} aria-hidden="true" />
-              </button>
-            </section>
-            <section className="gis-intelligence-section">
-              <div className="gis-section-title">
-                <h3>Environmental insights</h3>
-                <Leaf size={15} aria-hidden="true" />
-              </div>
-              <Metric label="Annual CO₂ sequestration" value="1,142 kg/yr" />
-              <Metric label="Dominant species" value="Hopea odorata (30%)" />
-              <button
-                type="button"
-                className="gis-action-link"
-                style={{ width: "100%", background: "transparent", border: 0, padding: 0 }}
-                onClick={() => onNavigateView?.("insights")}
-              >
-                <span>View environmental report</span>
-                <ArrowUpRight size={13} aria-hidden="true" />
-              </button>
-            </section>
-          </>
+              {selected.health === "critical" ? "!" : ""}
+            </span>
+            {healthLabels[selected.health ?? "unassessed"]}
+            {typeof selected.healthScore === "number"
+              ? ` · ${selected.healthScore}%`
+              : ""}
+          </span>
+        </div>
+
+        <h3
+          style={{
+            fontSize: "17px",
+            fontWeight: 500,
+            color: "var(--gis-text)",
+            margin: "4px 0 6px",
+            lineHeight: 1.35,
+          }}
+        >
+          {selected.species ?? "Botanical specimen"}
+        </h3>
+
+        {hasCoordinates(selected) && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              color: "var(--gis-muted)",
+              fontFamily: "var(--font-geist-mono), monospace",
+            }}
+          >
+            <MapPin
+              size={13}
+              aria-hidden="true"
+              style={{ color: "var(--gis-accent)" }}
+            />
+            {selected.coordinates[1].toFixed(5)}° N,{" "}
+            {selected.coordinates[0].toFixed(5)}° E
+          </div>
         )}
       </div>
-      <footer className="gis-panel-footnote">
-        {selected
-          ? "Digital Tree Passport anchored to Arbitrum Sepolia."
-          : "City of Elmina live operational telemetry."}
-      </footer>
-    </aside>
+
+      {/* Key Operational Metadata */}
+      <dl className="gis-passport-fields" style={{ margin: "0 0 14px" }}>
+        <div>
+          <dt>Responsible Contractor (2-Yr DLP)</dt>
+          <dd>{selected.contractor ?? "Elmina GreenWorks Sdn Bhd"}</dd>
+        </div>
+        <div>
+          <dt>On-Chain Audit Status</dt>
+          <dd style={{ color: "var(--gis-accent)" }}>
+            {selected.verification?.status === "verified" && evidence
+              ? "Anchored on Arbitrum Sepolia"
+              : "Pending verification"}
+          </dd>
+        </div>
+      </dl>
+
+      {/* Linked Hazard Reports for this Tree (if any) */}
+      {treeHazards.length > 0 && (
+        <section className="gis-intelligence-section">
+          <div className="gis-section-title">
+            <h3>Linked Hazard Reports ({treeHazards.length})</h3>
+            <Sparkles size={14} aria-hidden="true" />
+          </div>
+          <div style={{ display: "grid", gap: "10px" }}>
+            {treeHazards.map((h) => (
+              <div
+                key={h.id}
+                style={{
+                  padding: "10px",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(227, 107, 103, 0.4)",
+                  background: "rgba(227, 107, 103, 0.08)",
+                  fontSize: "11px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontWeight: 600,
+                    marginBottom: "4px",
+                  }}
+                >
+                  <span>
+                    #{h.id} · {h.hazard_type.replace(/_/g, " ")}
+                  </span>
+                  <span style={{ color: "#ff8a86" }}>
+                    {h.ai_severity_grade}
+                  </span>
+                </div>
+                <p style={{ margin: "0 0 6px", color: "var(--gis-muted)" }}>
+                  {h.description}
+                </p>
+                <div style={{ fontSize: "10px", color: "var(--gis-accent)" }}>
+                  {getSlaCountdown(h).label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Maintenance History & Proof Photos */}
+      <section className="gis-intelligence-section">
+        <div className="gis-section-title">
+          <h3>Verified Maintenance History</h3>
+          <Wrench size={14} aria-hidden="true" />
+        </div>
+        {treeMaintenance.length > 0 ? (
+          <div style={{ display: "grid", gap: "10px" }}>
+            {treeMaintenance.map((m) => (
+              <div
+                key={m.id}
+                style={{
+                  padding: "10px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--gis-border)",
+                  background: "var(--gis-secondary)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    marginBottom: "6px",
+                  }}
+                >
+                  <span>{m.action_type.replace(/_/g, " ")}</span>
+                  <span style={{ color: "var(--gis-muted)", fontSize: "10px" }}>
+                    {new Date(m.completed_at).toLocaleDateString("en-US")}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "6px",
+                    marginBottom: "6px",
+                  }}
+                >
+                  <img
+                    src={m.before_photo_url}
+                    alt="Before proof"
+                    style={{
+                      width: "100%",
+                      height: "56px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                    }}
+                  />
+                  <img
+                    src={m.after_photo_url}
+                    alt="After proof"
+                    style={{
+                      width: "100%",
+                      height: "56px",
+                      objectFit: "cover",
+                      borderRadius: "6px",
+                      border: "1px solid var(--gis-accent)",
+                    }}
+                  />
+                </div>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "var(--gis-muted)",
+                    margin: 0,
+                  }}
+                >
+                  {m.notes}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : selected.maintenance?.length ? (
+          <ol className="gis-history">
+            {selected.maintenance.map((entry) => (
+              <li key={entry.id}>
+                <p>{entry.description}</p>
+                {entry.performedAt && <span>{entry.performedAt}</span>}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>No maintenance entries supplied.</p>
+        )}
+      </section>
+
+      {evidence && (
+        <a
+          className="gis-action-link"
+          href={evidence}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span>Verify contract on Arbitrum Sepolia</span>
+          <ArrowUpRight size={14} aria-hidden="true" />
+        </a>
+      )}
+      <button
+        type="button"
+        className="gis-action-link"
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: 0,
+          padding: 0,
+        }}
+        onClick={() => {
+          onBack();
+          onNavigateView("maintenance");
+        }}
+      >
+        <span>Browse all township maintenance proofs</span>
+        <ArrowUpRight size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
@@ -431,124 +531,139 @@ export function LayerPanel({
         hasCoordinates(tree) && tree.health && tree.health !== "unassessed"
     );
   return (
-    <aside
-      className="gis-tool-panel gis-panel"
-      aria-labelledby="layers-title"
-      id="gis-layers"
-      style={{
-        top: "18px",
-        left: "18px",
-        width: "340px",
-        maxHeight: "calc(100% - 68px)",
-      }}
-    >
-      <header className="gis-panel-header">
-        <div>
-          <Layers3 size={17} aria-hidden="true" />
-          <h2 id="layers-title">Map layers</h2>
-        </div>
+    <div style={{ padding: "14px 0 18px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingBottom: "10px",
+          borderBottom: "1px solid var(--gis-border)",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            fontSize: "12px",
+            fontWeight: 500,
+          }}
+        >
+          <Layers3
+            size={15}
+            aria-hidden="true"
+            style={{ color: "var(--gis-cyan)" }}
+          />
+          Map Layers &amp; Cartography
+        </span>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Collapse map layers side panel"
-          title="Collapse side panel"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "4px 10px",
+            borderRadius: "999px",
+            border: "1px solid var(--gis-border)",
+            background: "var(--gis-secondary)",
+            color: "var(--gis-text)",
+            fontSize: "11px",
+          }}
         >
-          <PanelLeftClose size={17} aria-hidden="true" />
+          Done
         </button>
-      </header>
-      <div className="gis-panel-scroll">
-        <fieldset className="gis-basemap-options">
-          <legend>Geographic basemap</legend>
-          <label>
-            <input
-              type="radio"
-              name="basemap"
-              value="geographic"
-              checked={basemap === "geographic"}
-              onChange={() => onBasemap("geographic")}
-            />
-            <span>
-              Light geographic
-              <small>High-contrast light cartography with TreePine badges</small>
-            </span>
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="basemap"
-              value="satellite"
-              checked={basemap === "satellite"}
-              onChange={() => onBasemap("satellite")}
-            />
-            <span>
-              Satellite imagery
-              <small>High-resolution canopy aerial view</small>
-            </span>
-          </label>
-        </fieldset>
-        <p className="gis-layer-note">
-          {mapState.status === "ready"
-            ? `${
-                mapState.basemap === "satellite"
-                  ? "Satellite"
-                  : "Light geographic"
-              } basemap active. Click any TreePine badge to inspect its Digital Tree Passport.`
-            : "Connecting to geographic tile provider…"}
-        </p>
-        <h3 className="gis-subheading">Operational overlays</h3>
-        {[
-          {
-            label: "TreePine canopy badges",
-            enabled: locationsAvailable,
-            checked: showTrees,
-            toggle: onTrees,
-            tone: "healthy",
-          },
-          {
-            label: "Health condition colors",
-            enabled: healthAvailable,
-            checked: showHealth,
-            toggle: onHealth,
-            tone: "attention",
-          },
-        ].map((layer) => (
-          <label className="gis-layer-row" key={layer.label}>
-            <span
-              className={`gis-health-key gis-health-key--${layer.tone}`}
-              aria-hidden="true"
-            />
-            <span>
-              {layer.label}
-              <small>
-                {layer.enabled
-                  ? "40 geolocated Elmina records"
-                  : "Loading registry"}
-              </small>
-            </span>
-            <input
-              type="checkbox"
-              checked={layer.enabled && layer.checked}
-              disabled={!layer.enabled}
-              onChange={(event) => layer.toggle(event.target.checked)}
-            />
-          </label>
-        ))}
-        <label className="gis-opacity">
-          Tree badge opacity <output>{Math.round(opacity * 100)}%</output>
+      </div>
+
+      <fieldset className="gis-basemap-options">
+        <legend>Geographic basemap</legend>
+        <label>
           <input
-            type="range"
-            min="20"
-            max="100"
-            value={Math.round(opacity * 100)}
-            disabled={!locationsAvailable}
-            onChange={(event) => onOpacity(Number(event.target.value) / 100)}
+            type="radio"
+            name="basemap"
+            value="geographic"
+            checked={basemap === "geographic"}
+            onChange={() => onBasemap("geographic")}
+          />
+          <span>
+            Light geographic
+            <small>High-contrast light cartography with TreePine badges</small>
+          </span>
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="basemap"
+            value="satellite"
+            checked={basemap === "satellite"}
+            onChange={() => onBasemap("satellite")}
+          />
+          <span>
+            Satellite imagery
+            <small>High-resolution canopy aerial view</small>
+          </span>
+        </label>
+      </fieldset>
+      <p className="gis-layer-note">
+        {mapState.status === "ready"
+          ? `${
+              mapState.basemap === "satellite"
+                ? "Satellite"
+                : "Light geographic"
+            } basemap active. Click any TreePine badge on the map to open its Digital Tree Passport in this panel.`
+          : "Connecting to geographic tile provider…"}
+      </p>
+      <h3 className="gis-subheading">Operational overlays</h3>
+      {[
+        {
+          label: "TreePine canopy badges",
+          enabled: locationsAvailable,
+          checked: showTrees,
+          toggle: onTrees,
+          tone: "healthy",
+        },
+        {
+          label: "Health condition colors",
+          enabled: healthAvailable,
+          checked: showHealth,
+          toggle: onHealth,
+          tone: "attention",
+        },
+      ].map((layer) => (
+        <label className="gis-layer-row" key={layer.label}>
+          <span
+            className={`gis-health-key gis-health-key--${layer.tone}`}
+            aria-hidden="true"
+          />
+          <span>
+            {layer.label}
+            <small>
+              {layer.enabled
+                ? "40 geolocated Elmina records"
+                : "Loading registry"}
+            </small>
+          </span>
+          <input
+            type="checkbox"
+            checked={layer.enabled && layer.checked}
+            disabled={!layer.enabled}
+            onChange={(event) => layer.toggle(event.target.checked)}
           />
         </label>
-      </div>
-      <footer className="gis-panel-footnote">
-        Tactile TreePine markers synced with City of Elmina WGS84 coordinates.
-      </footer>
-    </aside>
+      ))}
+      <label className="gis-opacity">
+        Tree badge opacity <output>{Math.round(opacity * 100)}%</output>
+        <input
+          type="range"
+          min="20"
+          max="100"
+          value={Math.round(opacity * 100)}
+          disabled={!locationsAvailable}
+          onChange={(event) => onOpacity(Number(event.target.value) / 100)}
+        />
+      </label>
+    </div>
   );
 }
 
@@ -556,10 +671,12 @@ export function OperationPanel({
   view,
   trees,
   onSelect,
+  onNavigateView,
 }: {
   view: WorkspaceView;
   trees: readonly AdminTreeRecord[] | null;
   onSelect: (tree: AdminTreeRecord) => void;
+  onNavigateView?: (view: WorkspaceView) => void;
 }) {
   const [query, setQuery] = useState("");
   const [health, setHealth] = useState("all");
@@ -601,6 +718,14 @@ export function OperationPanel({
     );
   }, [trees]);
 
+  const priorityTrees = useMemo(
+    () =>
+      (trees ?? []).filter(
+        (t) => t.health === "critical" || t.health === "attention"
+      ),
+    [trees]
+  );
+
   const selectByTreeId = (treeId: string) => {
     const match = trees?.find((t) => t.id === treeId);
     if (match) {
@@ -608,13 +733,223 @@ export function OperationPanel({
     }
   };
 
+  if (view === "overview" || view === "map") {
+    return (
+      <div className="gis-operation-content">
+        <p>
+          Unified City of Elmina operational hub. Select any tree on the map or
+          below to inspect its Digital Tree Passport.
+        </p>
+
+        {/* Top KPI Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px",
+            marginBottom: "16px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => onNavigateView?.("trees")}
+            style={{
+              padding: "12px",
+              borderRadius: "12px",
+              border: "1px solid var(--gis-border)",
+              background: "var(--gis-secondary)",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ fontSize: "10px", color: "var(--gis-muted)" }}>
+              Registered Canopy
+            </span>
+            <strong
+              style={{
+                display: "block",
+                fontSize: "22px",
+                color: "var(--gis-text)",
+                marginTop: "2px",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {trees?.length ?? 40} Trees
+            </strong>
+            <span style={{ fontSize: "10px", color: "var(--gis-accent)" }}>
+              {avgCanopyHealth}% Avg Vitality →
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateView?.("sla")}
+            style={{
+              padding: "12px",
+              borderRadius: "12px",
+              border: "1px solid var(--gis-border)",
+              background: "var(--gis-secondary)",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ fontSize: "10px", color: "var(--gis-muted)" }}>
+              Contractor SLA
+            </span>
+            <strong
+              style={{
+                display: "block",
+                fontSize: "22px",
+                color: "var(--gis-accent)",
+                marginTop: "2px",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              94.7%
+            </strong>
+            <span style={{ fontSize: "10px", color: "var(--gis-amber)" }}>
+              1 Active 10% Penalty →
+            </span>
+          </button>
+        </div>
+
+        {/* Health Distribution Bar */}
+        <section
+          style={{
+            padding: "12px",
+            borderRadius: "12px",
+            border: "1px solid var(--gis-border)",
+            background: "var(--gis-secondary)",
+            marginBottom: "16px",
+          }}
+        >
+          <div className="gis-section-title" style={{ marginBottom: "10px" }}>
+            <h3>Canopy Health Breakdown</h3>
+            <Leaf size={14} aria-hidden="true" />
+          </div>
+          <div className="gis-health-list">
+            {(["healthy", "attention", "critical"] as const).map((key) => (
+              <div key={key}>
+                <span
+                  className={`gis-health-key gis-health-key--${key}`}
+                  aria-hidden="true"
+                >
+                  {key === "critical" ? "!" : ""}
+                </span>
+                <span>{healthLabels[key]}</span>
+                <span>
+                  {trees?.filter((tree) => tree.health === key).length ?? 0}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Priority Trees Needing Attention */}
+        <h3>Priority Trees Requiring Action ({priorityTrees.length})</h3>
+        <ul className="gis-tree-list" style={{ marginTop: "8px" }}>
+          {priorityTrees.map((tree) => (
+            <li key={tree.id}>
+              <button type="button" onClick={() => onSelect(tree)}>
+                <span>
+                  <strong>{tree.id}</strong>
+                  <small>{tree.species}</small>
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "11px",
+                  }}
+                >
+                  <span>{tree.healthScore}%</span>
+                  <span
+                    className={`gis-health-key gis-health-key--${
+                      tree.health ?? "unassessed"
+                    }`}
+                  >
+                    {tree.health === "critical" ? "!" : ""}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {/* Quick Navigation Shortcuts */}
+        <h3>Operational Modules</h3>
+        <div style={{ display: "grid", gap: "8px" }}>
+          <button
+            type="button"
+            onClick={() => onNavigateView?.("hazards")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: "1px solid var(--gis-border)",
+              background: "var(--gis-secondary)",
+              color: "var(--gis-text)",
+              fontSize: "11px",
+            }}
+          >
+            <span>Citizen Hazard Reports (Gemini 3.8 AI)</span>
+            <span style={{ color: "#ff8a86", fontWeight: 600 }}>
+              {hazards.filter((h) => h.status !== "RESOLVED").length} Open →
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateView?.("maintenance")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: "1px solid var(--gis-border)",
+              background: "var(--gis-secondary)",
+              color: "var(--gis-text)",
+              fontSize: "11px",
+            }}
+          >
+            <span>Verified Maintenance Proofs (Arbitrum)</span>
+            <span style={{ color: "var(--gis-accent)", fontWeight: 600 }}>
+              {maintenanceRecords.length} Anchored →
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigateView?.("insights")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: "1px solid var(--gis-border)",
+              background: "var(--gis-secondary)",
+              color: "var(--gis-text)",
+              fontSize: "11px",
+            }}
+          >
+            <span>Environmental Sequestration</span>
+            <span style={{ color: "var(--gis-cyan)", fontWeight: 600 }}>
+              1,142 kg CO₂/yr →
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="gis-operation-content">
       {view === "trees" ? (
         <>
           <p>
-            40 geolocated City of Elmina tree identities connected to live GIS
-            coordinates and 2-Year DLP contractor warranties.
+            40 geolocated City of Elmina tree identities. Click any tree to fly
+            the map and open its Digital Tree Passport.
           </p>
           <label className="gis-search">
             <Search size={16} aria-hidden="true" />
@@ -739,7 +1074,7 @@ export function OperationPanel({
                       fontWeight: 600,
                     }}
                   >
-                    {record.tree_id} · Fly to Tree
+                    {record.tree_id} · Open Passport
                   </button>
                   <span
                     style={{
@@ -1307,68 +1642,87 @@ export function ConnectionPanel({
   onClose: () => void;
 }) {
   return (
-    <aside
-      className="gis-tool-panel gis-panel"
-      aria-labelledby="connection-title"
-      style={{
-        top: "18px",
-        left: "18px",
-        width: "340px",
-        maxHeight: "calc(100% - 68px)",
-      }}
-    >
-      <header className="gis-panel-header">
-        <div>
-          <ShieldCheck size={17} aria-hidden="true" />
-          <h2 id="connection-title">Data connections</h2>
-        </div>
+    <div style={{ padding: "14px 0 18px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingBottom: "10px",
+          borderBottom: "1px solid var(--gis-border)",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            fontSize: "12px",
+            fontWeight: 500,
+          }}
+        >
+          <ShieldCheck
+            size={15}
+            aria-hidden="true"
+            style={{ color: "var(--gis-accent)" }}
+          />
+          Data Connections
+        </span>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Collapse connection details side panel"
-          title="Collapse side panel"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "4px 10px",
+            borderRadius: "999px",
+            border: "1px solid var(--gis-border)",
+            background: "var(--gis-secondary)",
+            color: "var(--gis-text)",
+            fontSize: "11px",
+          }}
         >
-          <PanelLeftClose size={17} aria-hidden="true" />
+          <X size={13} aria-hidden="true" />
+          Close
         </button>
-      </header>
-      <div className="gis-panel-scroll">
-        <p className="gis-layer-note">
-          Connected to City of Elmina GIS registry, Gemini 3.8 AI hazard triage,
-          and Arbitrum Sepolia audit contract.
-        </p>
-        <dl className="gis-definitions">
-          <div>
-            <dt>Map provider</dt>
-            <dd>
-              {mapState.status === "ready"
-                ? `Active ${mapState.basemap} cartography with 40 TreePine markers.`
-                : "Connecting to geographic tile server…"}
-            </dd>
-          </div>
-          <div>
-            <dt>Operational records</dt>
-            <dd>
-              Synced with INITIAL_TREES (40 Elmina trees), INITIAL_HAZARDS, and
-              INITIAL_MAINTENANCE via TreeLedger API &amp; local state.
-            </dd>
-          </div>
-          <div>
-            <dt>On-chain verification</dt>
-            <dd>
-              Anchored to Arbitrum Sepolia contract{" "}
-              <a
-                href={ARBISCAN_CONTRACT_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--gis-cyan)", wordBreak: "break-all" }}
-              >
-                0x685049b310922F6bc8d6FA17ddae010E13803701
-              </a>
-              .
-            </dd>
-          </div>
-        </dl>
       </div>
-    </aside>
+      <p className="gis-layer-note">
+        Connected to City of Elmina GIS registry, Gemini 3.8 AI hazard triage,
+        and Arbitrum Sepolia audit contract.
+      </p>
+      <dl className="gis-definitions">
+        <div>
+          <dt>Map provider</dt>
+          <dd>
+            {mapState.status === "ready"
+              ? `Active ${mapState.basemap} cartography with 40 TreePine markers.`
+              : "Connecting to geographic tile server…"}
+          </dd>
+        </div>
+        <div>
+          <dt>Operational records</dt>
+          <dd>
+            Synced with INITIAL_TREES (40 Elmina trees), INITIAL_HAZARDS, and
+            INITIAL_MAINTENANCE via TreeLedger API &amp; local state.
+          </dd>
+        </div>
+        <div>
+          <dt>On-chain verification</dt>
+          <dd>
+            Anchored to Arbitrum Sepolia contract{" "}
+            <a
+              href={ARBISCAN_CONTRACT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--gis-cyan)", wordBreak: "break-all" }}
+            >
+              0x685049b310922F6bc8d6FA17ddae010E13803701
+            </a>
+            .
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }
