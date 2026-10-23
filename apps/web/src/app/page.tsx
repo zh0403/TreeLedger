@@ -9,6 +9,7 @@ import {
   MapPin,
   QrCode,
   ShieldCheck,
+  Trees,
   Users,
 } from "lucide-react";
 import { DigitalTree } from "@/components/digital-tree";
@@ -18,6 +19,7 @@ import { Brand } from "@/components/ui/brand";
 import { ButtonLink } from "@/components/ui/button-link";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatusBadge } from "@/components/ui/status-badge";
+import TownshipTransparencyExplorer from "@/components/home/TownshipTransparencyExplorer";
 
 export default function Home() {
   const [deviceType, setDeviceType] = useState<"mobile" | "desktop">("desktop");
@@ -245,6 +247,39 @@ export default function Home() {
           </div>
         </div>
 
+        {/* 04 / The living ledger */}
+        <section
+          className="ledger-section"
+          id="ledger"
+          aria-labelledby="ledger-title"
+        >
+          <div className="ledger-container" data-reveal>
+            <div className="ledger-heading">
+              <Trees
+                className="chapter-icon"
+                size={29}
+                strokeWidth={1.3}
+                aria-hidden="true"
+              />
+              <SectionHeading
+                id="ledger-title"
+                label="04 / The living ledger"
+                description="Public Defect Liability Period (DLP) Audit & Township Canopy"
+              >
+                Promised on paper.
+                <br />
+                Verified in the soil.
+              </SectionHeading>
+              <p className="ledger-lead">
+                Before taking vacant possession, explore planted tree quotas across City of Elmina, live health telemetry, and contractor defect liability commitments.
+              </p>
+            </div>
+            <div className="ledger-frame">
+              <TownshipTransparencyExplorer />
+            </div>
+          </div>
+        </section>
+
         <section
           className="community-section"
           id="community"
@@ -255,7 +290,7 @@ export default function Home() {
             <Leaf size={30} strokeWidth={1.3} aria-hidden="true" />
             <SectionHeading
               id="community-title"
-              label="04 / Community participation"
+              label="05 / Community participation"
             >
               Caring for a township
               <br />
@@ -314,7 +349,7 @@ export default function Home() {
           <div className="platform-heading" data-reveal>
             <SectionHeading
               id="platform-title"
-              label="05 / Explore the platform"
+              label="06 / Explore the platform"
             >
               The right view.
               <br />

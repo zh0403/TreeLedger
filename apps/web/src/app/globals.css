@@ -160,6 +160,14 @@ section[id],article[id],details[id],div[id] { scroll-margin-top: 116px; }
 .audit-note p { font-size: 12px; line-height: 1.8; }
 .audit-note p>span { display: block; color: var(--muted); font-size: 11px; margin-top: 8px; }
 
+/* 04 / The living ledger - Public DLP Transparency Hub */
+.ledger-section { position: relative; background: var(--background); padding: 110px var(--page-gutter); border-top: 1px solid var(--border); }
+.ledger-container { max-width: 1320px; margin: 0 auto; }
+.ledger-heading { max-width: 680px; margin-bottom: var(--space-6); }
+.ledger-heading>svg { color: var(--accent); margin-bottom: var(--space-5); }
+.ledger-lead { max-width: 540px; margin-top: var(--space-4); font-size: 15px; line-height: 1.8; color: var(--muted); }
+.ledger-frame { margin-top: var(--space-6); border-radius: var(--radius-panel); }
+
 /* A welcoming light treatment introduces the resident journey without changing any app route. */
 .community-section { position: relative; background: var(--background); color: var(--foreground); display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(40px,8vw,140px); padding: 110px var(--page-gutter); }
 .community-copy>svg { color: var(--accent); margin-bottom: var(--space-6); }
