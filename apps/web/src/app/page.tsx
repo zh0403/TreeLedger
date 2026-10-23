@@ -247,13 +247,11 @@ export default function Home() {
 
         {/* 04 / The living ledger — Scoped outside .cinematic-story for a clean ground-truth transition */}
         <section
-          className="ledger-section relative z-10"
+          className="ledger-section"
           id="ledger"
           aria-labelledby="ledger-title"
         >
-          <div className="ledger-container">
-            <TownshipTransparencyExplorer showEditorialIntro />
-          </div>
+          <TownshipTransparencyExplorer showEditorialIntro />
         </section>
 
         <section

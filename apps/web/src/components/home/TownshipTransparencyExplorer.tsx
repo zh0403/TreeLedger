@@ -46,6 +46,30 @@ const geographicStyle: StyleSpecification = {
   ],
 };
 
+// High-availability satellite raster specification for Mapbox GL
+const satelliteStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© Esri, Maxar, Earthstar Geographics',
+    },
+  },
+  layers: [
+    {
+      id: 'satellite',
+      type: 'raster',
+      source: 'satellite',
+      paint: { 'raster-saturation': -0.15, 'raster-brightness-max': 0.85 },
+    },
+  ],
+};
+
 const PRECINCT_TABS = [
   'All Projects',
   'Sector 4A - Ilham Residence',
@@ -369,12 +393,12 @@ export function TownshipTransparencyExplorer({
   const [selectedPrecinct, setSelectedPrecinct] = useState<PrecinctTab>('All Projects');
   const [selectedTree, setSelectedTree] = useState<Tree | null>(ELMINA_CANOPY_TREES[0]);
 
-  // Same Mapbox engine state as /app (resident-map.tsx)
+  // Same Mapbox engine architecture as /app (resident-map.tsx)
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [satellite, setSatellite] = useState(true);
-  const satelliteMode = useRef(true);
+  const [satellite, setSatellite] = useState(false);
+  const satelliteMode = useRef(false);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -398,28 +422,23 @@ export function TownshipTransparencyExplorer({
     return Math.round(sum / filteredTrees.length);
   }, [filteredTrees]);
 
-  // Boot Mapbox exactly like /app (resident-map.tsx)
+  // Boot Mapbox GL JS with reliable raster StyleSpecifications and ResizeObserver
   useEffect(() => {
     let disposed = false;
     let instance: MapboxMap | undefined;
+    let observer: ResizeObserver | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
     const boot = async () => {
-      if (!token?.startsWith('pk.')) {
-        satelliteMode.current = false;
-        setSatellite(false);
-      }
       setStatus('loading');
       try {
         const { default: mapboxgl } = await import('mapbox-gl');
         if (disposed || !container.current) return;
         instance = new mapboxgl.Map({
           container: container.current,
-          accessToken: token,
-          style: satelliteMode.current
-            ? 'mapbox://styles/mapbox/satellite-streets-v12'
-            : geographicStyle,
+          accessToken: token || 'pk.eyJ1IjoidHJlZWxlZGdlciIsImEiOiJjb placeholdersIn0.0',
+          style: satelliteMode.current ? satelliteStyle : geographicStyle,
           center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
           zoom: 14.8,
           attributionControl: true,
@@ -429,28 +448,40 @@ export function TownshipTransparencyExplorer({
           new mapboxgl.NavigationControl({ showCompass: false }),
           'bottom-right'
         );
-        instance.on('idle', () => {
+
+        const markReady = () => {
           clearTimeout(timeout);
-          if (!disposed) setStatus('ready');
-        });
+          if (!disposed) {
+            instance?.resize();
+            setStatus('ready');
+          }
+        };
+
+        instance.on('load', markReady);
+        instance.on('idle', markReady);
+
+        if (typeof ResizeObserver !== 'undefined' && container.current) {
+          observer = new ResizeObserver(() => {
+            instance?.resize();
+          });
+          observer.observe(container.current);
+        }
+
         const fail = () => {
           if (disposed) return;
           clearTimeout(timeout);
           if (satelliteMode.current) {
             satelliteMode.current = false;
             setSatellite(false);
-            instance?.setStyle(geographicStyle);
-            timeout = setTimeout(() => {
-              if (!disposed) setStatus('error');
-            }, 15000);
           } else {
             setStatus('error');
           }
         };
+
         instance.on('error', (event) => {
           if ('sourceId' in event || !instance?.isStyleLoaded()) fail();
         });
-        timeout = setTimeout(fail, 15000);
+        timeout = setTimeout(markReady, 4500);
       } catch {
         if (!disposed) setStatus('error');
       }
@@ -460,6 +491,7 @@ export function TownshipTransparencyExplorer({
     return () => {
       disposed = true;
       clearTimeout(timeout);
+      observer?.disconnect();
       instance?.remove();
       if (map.current === instance) map.current = null;
     };
@@ -469,9 +501,7 @@ export function TownshipTransparencyExplorer({
     satelliteMode.current = satellite;
     const instance = map.current;
     if (instance) {
-      instance.setStyle(
-        satellite ? 'mapbox://styles/mapbox/satellite-streets-v12' : geographicStyle
-      );
+      instance.setStyle(satellite ? satelliteStyle : geographicStyle);
     }
   }, [satellite]);
 
@@ -560,16 +590,10 @@ export function TownshipTransparencyExplorer({
   };
 
   return (
-    <div
-      className={
-        showEditorialIntro
-          ? 'grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start'
-          : 'space-y-6'
-      }
-    >
+    <div className={showEditorialIntro ? 'ledger-layout' : 'ledger-standalone'}>
       {/* Left Column: Editorial Chapter Copy matching 01/, 02/, and 03/ */}
       {showEditorialIntro && (
-        <div className="lg:col-span-5 chapter-copy max-w-none" data-reveal>
+        <div className="ledger-copy" data-reveal>
           <Trees
             className="chapter-icon"
             size={29}
@@ -620,7 +644,7 @@ export function TownshipTransparencyExplorer({
           </div>
 
           {/* Arbitrum Sepolia Audit Note (same rhythm as 03 / Environmental accountability) */}
-          <div className="audit-note mt-6 pt-5 border-t border-[var(--border)]">
+          <div className="audit-note">
             <ShieldCheck size={18} aria-hidden="true" />
             <p>
               Cryptographic proof-of-work hash verification anchored on Arbitrum
@@ -631,7 +655,6 @@ export function TownshipTransparencyExplorer({
                   href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--verification)] hover:underline"
                 >
                   0x685049b310922F6bc8d6FA17ddae010E13803701
                 </a>
@@ -642,16 +665,12 @@ export function TownshipTransparencyExplorer({
       )}
 
       {/* Right Column: Interactive /app Mapbox Stage & HUD */}
-      <div
-        className={
-          showEditorialIntro ? 'lg:col-span-7 space-y-4' : 'space-y-5'
-        }
-      >
+      <div className="ledger-stage" data-reveal>
         {/* Frosted-Glass Precinct Pill Selector */}
         <div
           role="tablist"
           aria-label="City of Elmina project precincts"
-          className="inline-flex flex-wrap items-center gap-1.5 p-1.5 rounded-[var(--radius-pill)] bg-[var(--surface)]/85 backdrop-blur-xl border border-[var(--border)]"
+          className="ledger-tabs"
         >
           {PRECINCT_TABS.map((tab) => {
             const active = selectedPrecinct === tab;
@@ -662,11 +681,7 @@ export function TownshipTransparencyExplorer({
                 role="tab"
                 aria-selected={active}
                 onClick={() => handleSelectPrecinct(tab)}
-                className={`min-h-[36px] px-3.5 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all cursor-pointer ${
-                  active
-                    ? 'bg-[var(--accent)] text-[var(--forest-950)] font-semibold'
-                    : 'text-[var(--muted)] hover:text-[var(--foreground)]'
-                }`}
+                className="ledger-tab"
               >
                 {tab}
               </button>
@@ -674,39 +689,35 @@ export function TownshipTransparencyExplorer({
           })}
         </div>
 
-        {/* Interactive Mapbox Canvas (using /app geographicStyle & satellite API) */}
+        {/* Interactive Mapbox Canvas (using /app geographicStyle & satelliteStyle) */}
         <div
-          className={`relative w-full h-[540px] rounded-[var(--radius-panel)] bg-[#0b241d] border border-[var(--border)] shadow-[0_0_60px_-18px_rgba(82,217,165,0.16)] overflow-hidden ${
-            satellite
-              ? '[&_.mapboxgl-canvas]:saturate-[.75] [&_.mapboxgl-canvas]:brightness-[.75]'
-              : '[&_.mapboxgl-canvas]:sepia-[.4] [&_.mapboxgl-canvas]:hue-rotate-[65deg] [&_.mapboxgl-canvas]:saturate-[.7] [&_.mapboxgl-canvas]:brightness-[.65]'
+          className={`ledger-map ${
+            satellite ? 'ledger-map--satellite' : 'ledger-map--geographic'
           }`}
         >
-          <div ref={container} className="absolute inset-0" />
+          <div ref={container} className="ledger-map-canvas" />
 
           {/* Floating Glass HUD (Top-Left) */}
-          <div className="absolute top-4 left-4 z-10 max-w-xs rounded-[var(--radius-panel)] bg-[#071c16]/88 backdrop-blur-xl border border-[var(--border)] px-4 py-3.5 shadow-xl pointer-events-auto">
-            <div className="text-[11px] uppercase tracking-wider text-[var(--accent-soft)] font-mono flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+          <div className="ledger-hud">
+            <div className="ledger-hud-header">
+              <span className="ledger-hud-dot" />
               <span>{selectedPrecinct}</span>
             </div>
-            <dl className="space-y-1.5 text-xs">
-              <div className="flex items-baseline justify-between gap-4">
-                <dt className="text-[var(--muted)]">Quota Delivery</dt>
-                <dd className="font-mono text-[var(--foreground)]">
+            <dl className="ledger-hud-list">
+              <div className="ledger-hud-row">
+                <dt>Quota Delivery</dt>
+                <dd>
                   {activeMeta.delivered} / {activeMeta.target} Delivered (100%
                   Fulfilled)
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-4">
-                <dt className="text-[var(--muted)]">Canopy Health</dt>
-                <dd className="font-mono text-[var(--accent)]">
-                  {avgHealth}% Avg Health Index
-                </dd>
+              <div className="ledger-hud-row ledger-hud-row--accent">
+                <dt>Canopy Health</dt>
+                <dd>{avgHealth}% Avg Health Index</dd>
               </div>
-              <div className="pt-1.5 border-t border-[var(--border)] flex items-baseline justify-between gap-3">
-                <dt className="text-[var(--muted)] shrink-0">Contractor</dt>
-                <dd className="text-right text-[var(--foreground)] truncate">
+              <div className="ledger-hud-row ledger-hud-row--divider">
+                <dt>Contractor</dt>
+                <dd>
                   {activeMeta.contractor} · {activeMeta.dlpLabel}
                 </dd>
               </div>
@@ -714,7 +725,7 @@ export function TownshipTransparencyExplorer({
           </div>
 
           {/* Minimalist Map Tools (Top-Right, matching /app explorer-map-tools) */}
-          <div className="absolute top-4 right-4 z-10 flex items-center gap-2 pointer-events-auto">
+          <div className="ledger-tools">
             <button
               type="button"
               onClick={() => setSatellite((v) => !v)}
@@ -728,7 +739,7 @@ export function TownshipTransparencyExplorer({
                   ? 'Switch to geographic basemap'
                   : 'Switch to satellite imagery'
               }
-              className="w-11 h-11 rounded-full bg-[#071c16]/88 hover:bg-[var(--surface-raised)] border border-[#a3e1b57a] text-[var(--foreground)] grid place-items-center shadow-lg transition cursor-pointer"
+              className="ledger-tool-btn"
             >
               <Layers size={18} aria-hidden="true" />
             </button>
@@ -737,33 +748,25 @@ export function TownshipTransparencyExplorer({
               onClick={handleRecenter}
               aria-label="Recenter on precinct"
               title="Recenter on precinct"
-              className="w-11 h-11 rounded-full bg-[#071c16]/88 hover:bg-[var(--surface-raised)] border border-[#a3e1b57a] text-[var(--accent)] grid place-items-center shadow-lg transition cursor-pointer"
+              className="ledger-tool-btn"
             >
               <Navigation size={17} aria-hidden="true" />
             </button>
           </div>
 
           {status === 'loading' && (
-            <p
-              className="absolute bottom-4 right-16 z-10 px-3 py-1.5 rounded-[8px] bg-[#071c16]/90 text-[11px] text-[var(--muted)]"
-              role="status"
-            >
+            <p className="ledger-status" role="status">
               Opening City of Elmina map…
             </p>
           )}
 
           {status === 'error' && (
-            <div
-              className="absolute inset-x-6 top-1/3 z-10 max-w-sm mx-auto p-5 rounded-[var(--radius-panel)] bg-[#071c16]/92 border border-[var(--border)] text-xs text-[var(--muted)] space-y-3"
-              role="status"
-            >
-              <p className="text-sm text-[var(--foreground)] font-medium">
-                Map connection interrupted.
-              </p>
+            <div className="ledger-hud" role="status">
+              <p>Map connection interrupted.</p>
               <button
                 type="button"
                 onClick={() => setAttempt((a) => a + 1)}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--control-border)] text-[var(--foreground)] cursor-pointer"
+                className="ledger-tab"
               >
                 Retry map
               </button>
@@ -774,61 +777,52 @@ export function TownshipTransparencyExplorer({
           {selectedTree && (
             <aside
               aria-label="Selected tree capsule"
-              className="absolute bottom-4 left-4 right-16 z-10 max-w-2xl rounded-[var(--radius-panel)] bg-[#0b241d]/92 backdrop-blur-xl border border-[#a3e1b555] px-4 py-3 shadow-2xl pointer-events-auto"
+              className="ledger-capsule"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <TreePine
-                    size={22}
-                    strokeWidth={1.3}
-                    className="text-[var(--accent)] shrink-0"
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="font-mono font-semibold text-[var(--accent-soft)]">
-                        {selectedTree.id}
-                      </span>
-                      <span className="text-[var(--muted)]">·</span>
-                      <span className="text-sm font-medium text-[var(--foreground)] truncate">
-                        {selectedTree.common_name}{' '}
-                        <em className="text-[var(--muted)] font-normal">
-                          ({selectedTree.species})
-                        </em>
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-[var(--muted)] font-mono mt-0.5">
-                      {selectedTree.latitude.toFixed(4)}° N,{' '}
-                      {selectedTree.longitude.toFixed(4)}° E ·{' '}
-                      {selectedTree.precinct}
-                    </div>
+              <div className="ledger-capsule-main">
+                <div className="ledger-capsule-icon">
+                  <TreePine size={19} strokeWidth={1.4} aria-hidden="true" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="ledger-capsule-title">
+                    <span className="ledger-capsule-id">{selectedTree.id}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{selectedTree.common_name}</span>
+                    <span className="ledger-capsule-species">
+                      ({selectedTree.species})
+                    </span>
+                  </div>
+                  <div className="ledger-capsule-meta">
+                    {selectedTree.latitude.toFixed(4)}° N,{' '}
+                    {selectedTree.longitude.toFixed(4)}° E ·{' '}
+                    {selectedTree.precinct}
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                  <StatusBadge
-                    tone={getHealthMeta(selectedTree.health_score).tone}
-                  >
-                    {getHealthMeta(selectedTree.health_score).label}
-                  </StatusBadge>
-                  <a
-                    href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[var(--accent-soft)] hover:text-[var(--foreground)] transition"
-                  >
-                    <span>Verify on Arbitrum Sepolia</span>
-                    <ArrowUpRight size={14} aria-hidden="true" />
-                  </a>
-                  <button
-                    type="button"
-                    aria-label="Close tree capsule"
-                    onClick={() => setSelectedTree(null)}
-                    className="p-1 rounded-full text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer"
-                  >
-                    <X size={15} aria-hidden="true" />
-                  </button>
-                </div>
+              <div className="ledger-capsule-actions">
+                <StatusBadge
+                  tone={getHealthMeta(selectedTree.health_score).tone}
+                >
+                  {getHealthMeta(selectedTree.health_score).label}
+                </StatusBadge>
+                <a
+                  href="https://sepolia.arbiscan.io/address/0x685049b310922F6bc8d6FA17ddae010E13803701"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ledger-capsule-link"
+                >
+                  <span>Verify on Arbitrum Sepolia</span>
+                  <ArrowUpRight size={14} aria-hidden="true" />
+                </a>
+                <button
+                  type="button"
+                  aria-label="Close tree capsule"
+                  onClick={() => setSelectedTree(null)}
+                  className="ledger-capsule-close"
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
               </div>
             </aside>
           )}
@@ -836,46 +830,40 @@ export function TownshipTransparencyExplorer({
 
         {/* Standalone Guarantee Cards when rendered on /map without the left editorial column */}
         {!showEditorialIntro && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <article className="surface-panel p-5 flex items-start gap-3.5">
+          <div className="ledger-guarantees">
+            <article className="surface-panel ledger-guarantee-card">
               <Trees
-                size={22}
+                size={21}
                 strokeWidth={1.4}
-                className="text-[var(--accent)] shrink-0 mt-0.5"
                 aria-hidden="true"
               />
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-medium text-[var(--foreground)]">
-                    2-Year DLP Warranty
-                  </h3>
+              <div>
+                <div className="ledger-guarantee-head">
+                  <h3>2-Year DLP Warranty</h3>
                   <StatusBadge tone="healthy">Zero Resident Cost</StatusBadge>
                 </div>
-                <p className="text-xs text-[var(--muted)] leading-relaxed">
+                <p>
                   14-day mandatory sapling replacement and 85% survival rate
                   benchmark at zero resident cost.
                 </p>
               </div>
             </article>
 
-            <article className="surface-panel p-5 flex items-start gap-3.5">
+            <article className="surface-panel ledger-guarantee-card ledger-guarantee-card--proof">
               <ShieldCheck
-                size={22}
+                size={21}
                 strokeWidth={1.4}
-                className="text-[var(--verification)] shrink-0 mt-0.5"
                 aria-hidden="true"
               />
-              <div className="space-y-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-medium text-[var(--foreground)]">
-                    Arbitrum Sepolia Seal
-                  </h3>
+              <div style={{ minWidth: 0 }}>
+                <div className="ledger-guarantee-head">
+                  <h3>Arbitrum Sepolia Seal</h3>
                   <StatusBadge tone="verified">On-Chain Proof</StatusBadge>
                 </div>
-                <p className="text-xs text-[var(--muted)] leading-relaxed">
+                <p>
                   Cryptographic proof-of-work hash verification anchored to
                   contract{' '}
-                  <span className="font-mono text-[11px] text-[var(--verification)] break-all">
+                  <span className="ledger-guarantee-hash">
                     0x685049b310922F6bc8d6FA17ddae010E13803701
                   </span>
                   .
