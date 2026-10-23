@@ -1,4 +1,186 @@
 /* Continuation of Nature Explorer. Home's layout remains in resident-explorer.css. */
+.nature-report-intro {
+  color: var(--explorer-light);
+  background: var(--explorer-forest);
+}
+.nature-report-intro-inner {
+  max-width: 1440px;
+  margin: auto;
+  padding: 22px var(--explorer-gutter) 50px;
+}
+.nature-report-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--explorer-muted);
+  font-size: 12px;
+}
+.nature-report-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--explorer-light);
+}
+.nature-report-intro-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 1fr);
+  align-items: center;
+  gap: clamp(30px, 6vw, 100px);
+  padding: 17px 0 28px;
+}
+.nature-report-intro-copy h1 {
+  font-size: clamp(32px, 3vw, 44px);
+  font-weight: 450;
+  line-height: 1.13;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.nature-report-intro-copy p {
+  max-width: 480px;
+  margin-top: 16px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--explorer-muted);
+}
+.nature-report-draft-info {
+  border-left: 1px solid color-mix(in srgb, var(--explorer-mint) 25%, transparent);
+  padding-left: 28px;
+}
+.nature-report-draft-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--explorer-mint);
+}
+.nature-report-draft-info h2 {
+  margin-top: 12px;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -.025em;
+  line-height: 1.35;
+}
+.nature-report-draft-info p {
+  margin-top: 9px;
+  max-width: 340px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--explorer-muted);
+}
+.nature-report-draft-info a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--explorer-mint);
+}
+.nature-report-draft-info a svg { flex-shrink: 0; }
+.nature-report-intro a:hover { color: var(--explorer-light); text-decoration: underline; text-underline-offset: 4px; }
+.nature-report-intro a:focus-visible { outline: 2px solid var(--explorer-mint); outline-offset: 4px; border-radius: 3px; }
+.nature-report-intro-caption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--explorer-mint) 17%, transparent);
+  color: var(--explorer-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.nature-report-intro-caption svg { color: var(--explorer-mint); flex-shrink: 0; }
+.nature-report-intro-caption span:last-child { margin-left: auto; }
+.nature-report-page .nature-report-intro-inner { padding-bottom: 24px; }
+.nature-report-page .nature-form-layout {
+  position: relative;
+  margin-top: 0;
+  padding-top: clamp(20px, 2vw, 28px);
+}
+.nature-report-page .nature-form-layout>* { min-width: 0; }
+.nature-report-page .nature-guided-report { box-shadow: 0 8px 28px #071c1608; }
+@media (max-width: 850px) {
+  .nature-report-intro-content { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; }
+  .nature-report-draft-info { padding-left: 22px; }
+}
+@media (max-width: 600px) {
+  .nature-report-intro-inner { padding-top: 8px; padding-bottom: 42px; }
+  .nature-report-intro-content { grid-template-columns: 1fr; gap: 22px; padding-top: 12px; padding-bottom: 22px; }
+  .nature-report-intro-copy h1 { font-size: clamp(29px, 7.8vw, 34px); }
+  .nature-report-intro-copy p { margin-top: 12px; font-size: 13px; }
+  .nature-report-draft-info { padding-left: 16px; }
+  .nature-report-draft-info h2 { display: none; }
+  .nature-report-draft-info p { font-size: 12px; }
+  .nature-report-intro-caption { flex-wrap: wrap; font-size: 11px; gap: 7px; }
+  .nature-report-intro-caption span:last-child { display: none; }
+  .nature-report-page .nature-guided-report { padding: 20px; }
+}
+.nature-reports-intro-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 16px 0 8px;
+}
+.nature-reports-intro-actions { display: grid; justify-items: end; gap: 12px; max-width: 270px; }
+.nature-reports-intro-actions .nature-intro-cta { gap: 12px; }
+.nature-reports-intro-actions>span { color: var(--explorer-muted); font-size: 12px; line-height: 1.7; text-align: right; }
+.nature-reports-intro .nature-report-intro-inner { padding-bottom: 24px; }
+.nature-reports-page .nature-reports-content {
+  position: relative;
+  margin-top: 0;
+  padding-top: clamp(20px, 2vw, 28px);
+}
+.nature-reports-overview {
+  display: grid;
+  grid-template-columns: minmax(220px, .75fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 28px;
+  padding: 24px 28px;
+  border: 1px solid var(--resident-border);
+  border-radius: 18px;
+  background: var(--resident-white);
+  box-shadow: 0 8px 28px #071c1608;
+}
+.nature-reports-draft-count { display: flex; align-items: center; gap: 16px; }
+.nature-reports-draft-count>span { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 14px; color: var(--resident-green); background: var(--resident-soft); }
+.nature-reports-draft-count>div { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 12px; }
+.nature-reports-draft-count strong { grid-row: span 2; font-size: 32px; font-weight: 450; letter-spacing: -.04em; line-height: 1.2; }
+.nature-reports-draft-count div>span { font-size: 13px; }
+.nature-reports-draft-count small { font-size: 11px; color: var(--resident-sage); }
+.nature-reports-service-note { display: flex; align-items: center; gap: 16px; border-left: 1px solid var(--resident-border); padding-left: 28px; }
+.nature-reports-service-note>svg { flex-shrink: 0; color: var(--resident-green); }
+.nature-reports-service-note>div { flex: 1; min-width: 0; }
+.nature-reports-service-note h2 { font-size: 14px; font-weight: 500; line-height: 1.4; }
+.nature-reports-service-note p { margin-top: 5px; max-width: 470px; font-size: 12px; color: var(--resident-sage); line-height: 1.7; }
+.nature-reports-service-note a { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; color: var(--resident-green); font-size: 12px; line-height: 1.6; }
+.nature-reports-service-note a svg { flex-shrink: 0; }
+.nature-reports-page .nature-report-empty { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 0 24px; text-align: left; padding: 28px; }
+.nature-reports-page .nature-report-empty>span { grid-row: span 3; width: 64px; height: 64px; margin: 0; }
+.nature-reports-page .nature-report-empty h2 { grid-column: 2; font-size: 24px; }
+.nature-reports-page .nature-report-empty>p { grid-column: 2; max-width: 620px; margin: 10px 0 18px; }
+.nature-reports-page .nature-report-empty>a { grid-column: 2; justify-self: start; }
+@media (max-width: 1000px) {
+  .nature-reports-overview { grid-template-columns: minmax(180px, .8fr) minmax(0, 1.5fr); gap: 20px; padding: 22px; }
+  .nature-reports-service-note { flex-wrap: wrap; gap: 10px; padding-left: 20px; }
+  .nature-reports-service-note a { margin-left: 32px; }
+}
+@media (max-width: 600px) {
+  .nature-reports-intro-content { display: block; padding-top: 12px; }
+  .nature-reports-intro-actions { justify-items: start; max-width: none; gap: 8px; margin-top: 20px; }
+  .nature-reports-intro-actions>span { text-align: left; }
+  .nature-reports-overview { grid-template-columns: 1fr; gap: 18px; padding: 20px; margin-bottom: 22px; }
+  .nature-reports-service-note { padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--resident-border); }
+  .nature-reports-service-note>div { flex-basis: calc(100% - 32px); }
+  .nature-reports-page .nature-report-empty { grid-template-columns: 1fr; padding: 23px; gap: 14px; }
+  .nature-reports-page .nature-report-empty>span { grid-row: auto; width: 52px; height: 52px; }
+  .nature-reports-page .nature-report-empty h2,.nature-reports-page .nature-report-empty>p,.nature-reports-page .nature-report-empty>a { grid-column: 1; }
+  .nature-reports-page .nature-report-empty>p { margin: 0; }
+}
 .resident-legacy-editor>.button,.resident-legacy-editor>.draft-feedback { display: none; }
 .nature-page { color: var(--resident-ink); background: var(--resident-ivory); min-height: 65svh; }
 .nature-page-intro { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 40px; padding: 40px max(var(--explorer-gutter),calc((100vw - 1440px) / 2)); background: var(--explorer-forest); color: var(--explorer-light); }

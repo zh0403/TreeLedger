@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
   Fingerprint,
+  HardHat,
   Leaf,
   MapPin,
   QrCode,
@@ -18,6 +20,7 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatusBadge } from "@/components/ui/status-badge";
 import TownshipTransparencyExplorer from "@/components/home/TownshipTransparencyExplorer";
+import "./landing-workspaces.css";
 
 export default function Home() {
   const targetPath = "/app";
@@ -295,11 +298,31 @@ export default function Home() {
               <br />
               For the work you do.
             </SectionHeading>
-            <div className="pt-4">
+            <div className="platform-launch">
               <ButtonLink href={targetPath}>
                 Launch TreeLedger <ArrowRight size={17} aria-hidden="true" />
               </ButtonLink>
+              <p>Or choose your workspace below.</p>
             </div>
+          </div>
+          <div className="platform-workspaces">
+            <div className="platform-workspaces-caption"><Leaf size={18} strokeWidth={1.4} aria-hidden="true" /><p>One canopy. Shared responsibility.</p><span>Find your place in its care.</span></div>
+            <nav className="platform-workspace-links" aria-label="Choose your TreeLedger workspace">
+              {[
+                { title: "Resident", subtitle: "Your neighbourhood", href: "/app", icon: Leaf, description: "Get to know the trees around you and flag a concern when something needs care.", features: ["Discover trees", "Report concerns"], action: "Explore as a resident" },
+                { title: "Contractor", subtitle: "In the field", href: "/contractor/tasks", icon: HardHat, description: "Review assigned work orders and add photos and field notes to the care record.", features: ["Work orders", "Photo evidence"], action: "Open field workspace" },
+                { title: "Admin", subtitle: "Across the township", href: "/admin", icon: ShieldCheck, description: "Bring tree locations, maintenance and outstanding reports into one operational view.", features: ["Township GIS", "Maintenance oversight"], action: "Open township operations" },
+              ].map(({ title, subtitle, href, icon: Icon, description, features, action }) => (
+                <Link key={title} href={href} className="platform-workspace-link">
+                  <div className="platform-workspace-top"><span className="platform-workspace-icon"><Icon size={25} strokeWidth={1.4} aria-hidden="true" /></span><ArrowUpRight className="platform-workspace-arrow" size={20} strokeWidth={1.5} aria-hidden="true" /></div>
+                  <p className="platform-workspace-subtitle">{subtitle}</p>
+                  <h3>{title}</h3>
+                  <p className="platform-workspace-description">{description}</p>
+                  <ul className="platform-workspace-features">{features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+                  <span className="platform-workspace-action">{action}<ArrowRight size={16} aria-hidden="true" /></span>
+                </Link>
+              ))}
+            </nav>
           </div>
         </section>
       </main>

@@ -709,7 +709,7 @@ export default function TownshipAdminCommandCenter() {
 
   return (
     <div
-      className="min-h-screen w-full bg-[var(--background)] text-[var(--foreground)] flex flex-col"
+      className="admin-operations min-h-screen w-full bg-[var(--background)] text-[var(--foreground)] flex flex-col"
       data-theme="dark"
     >
       <MainPrototypeNotice home="/admin" />
@@ -1261,7 +1261,7 @@ export default function TownshipAdminCommandCenter() {
           aria-modal="true"
           aria-labelledby="esg-modal-title"
         >
-          <div className="w-full max-w-2xl rounded-[var(--radius-dialog)] bg-[var(--surface)] border border-[var(--border)] shadow-2xl overflow-hidden">
+          <div className="admin-operations-dialog w-full max-w-2xl rounded-[var(--radius-dialog)] bg-[var(--surface)] border border-[var(--border)] shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="p-5 border-b border-[var(--border)] flex items-start justify-between bg-[var(--surface-raised)]/60">
               <div className="flex items-center gap-3">

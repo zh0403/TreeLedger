@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { Brand } from "@/components/ui/brand";
 import TownshipTransparencyExplorer from "@/components/home/TownshipTransparencyExplorer";
@@ -21,9 +22,9 @@ export default function LiveMapPage() {
       <footer className="site-footer">
         <Brand href="/" className="wordmark" />
         <p>Urban forestry &amp; municipal SLA verification.</p>
-        <a href="/#overview">
+        <Link href="/#overview">
           Back to the story <ArrowUpRight size={15} aria-hidden="true" />
-        </a>
+        </Link>
       </footer>
     </div>
   );
