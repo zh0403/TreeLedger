@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import "@/components/admin/admin-gis.css";
 import { MainPrototypeNotice } from "@/components/main-services";
 import { Brand } from "@/components/ui/brand";

@@ -1,24 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowRight,
   ArrowUpRight,
-  CheckCircle2,
   Fingerprint,
-  HardHat,
-  Laptop,
-  LayoutDashboard,
   Leaf,
   MapPin,
   QrCode,
   ShieldCheck,
-  Smartphone,
-  Trees,
   Users,
-  Wrench,
 } from "lucide-react";
 import { DigitalTree } from "@/components/digital-tree";
 import { ScrollReveals } from "@/components/scroll-reveals";
@@ -27,61 +18,9 @@ import { Brand } from "@/components/ui/brand";
 import { ButtonLink } from "@/components/ui/button-link";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatusBadge } from "@/components/ui/status-badge";
-import TownshipTransparencyExplorer from "@/components/home/TownshipTransparencyExplorer";
-
-const experiences = [
-  {
-    id: "residents",
-    title: "Resident",
-    icon: Users,
-    description:
-      "Get to know the trees around you and raise concerns when something needs attention.",
-    journey: [
-      "Discover a tree",
-      "View its identity and care history",
-      "Report a concern",
-      "Track the report status",
-    ],
-    href: "#community",
-    link: "See the resident journey",
-  },
-  {
-    id: "field-teams",
-    title: "Contractor",
-    icon: Wrench,
-    description:
-      "Follow assigned work and attach maintenance evidence to the tree being cared for.",
-    journey: [
-      "View assigned tasks",
-      "Open the tree location",
-      "Record work and photo evidence",
-      "Submit maintenance proof",
-    ],
-    href: "#lifecycle",
-    link: "See the verification workflow",
-  },
-  {
-    id: "township",
-    title: "Admin",
-    icon: MapPin,
-    description:
-      "Bring tree identities, location context, and maintenance obligations into one township view.",
-    journey: [
-      "Explore township trees",
-      "Review maintenance and reports",
-      "Check SLA obligations",
-      "Review available verification evidence",
-    ],
-    href: "#intelligence",
-    link: "See township intelligence",
-  },
-];
 
 export default function Home() {
-  const [deviceType, setDeviceType] = useState<"mobile" | "desktop">("mobile");
-  const [detectionSource, setDetectionSource] =
-    useState<string>("Auto-detecting...");
-  const [redirecting, setRedirecting] = useState<string | null>(null);
+  const [deviceType, setDeviceType] = useState<"mobile" | "desktop">("desktop");
 
   useEffect(() => {
     const runDetection = () => {
@@ -99,18 +38,10 @@ export default function Home() {
         navigator.maxTouchPoints > 0 ||
         (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
 
-      if (isMobileUA) {
+      if (isMobileUA || (hasTouch && isSmallScreen) || isSmallScreen) {
         setDeviceType("mobile");
-        setDetectionSource("Mobile User-Agent detected");
-      } else if (hasTouch && isSmallScreen) {
-        setDeviceType("mobile");
-        setDetectionSource("Touchscreen & mobile screen width");
-      } else if (isSmallScreen) {
-        setDeviceType("mobile");
-        setDetectionSource(`Viewport width (${window.innerWidth}px)`);
       } else {
         setDeviceType("desktop");
-        setDetectionSource("Desktop browser detected");
       }
     };
 
@@ -123,10 +54,6 @@ export default function Home() {
   }, []);
 
   const targetPath = deviceType === "mobile" ? "/app/explore" : "/admin";
-  const targetLabel =
-    deviceType === "mobile"
-      ? "Launch Resident Mobile PWA"
-      : "Launch Township Command Center";
 
   return (
     <div className="landing">
@@ -168,9 +95,10 @@ export default function Home() {
                 </p>
                 <div className="hero-actions">
                   <ButtonLink href="#workspaces">
-                    Explore TreeLedger <ArrowRight size={17} aria-hidden="true" />
+                    Explore TreeLedger{" "}
+                    <ArrowRight size={17} aria-hidden="true" />
                   </ButtonLink>
-                  <ButtonLink href="/app/map" variant="secondary">
+                  <ButtonLink href="/map" variant="secondary">
                     View Live Tree Map{" "}
                     <ArrowUpRight size={16} aria-hidden="true" />
                   </ButtonLink>
@@ -250,16 +178,12 @@ export default function Home() {
                   <h3>Live tree map</h3>
                   <p>
                     Inspect City of Elmina precincts, pre-handover DLP quotas,
-                    and real-time canopy telemetry in the transparency explorer
-                    below or the operations map workspace.
+                    and real-time canopy telemetry in the dedicated Live Map
+                    explorer.
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
-                    <ButtonLink href="#transparency">
-                      View Live Canopy Map{" "}
-                      <ArrowRight size={15} aria-hidden="true" />
-                    </ButtonLink>
-                    <ButtonLink href="/admin/map" variant="text">
-                      Open map workspace{" "}
+                    <ButtonLink href="/map">
+                      Open Live Tree Map{" "}
                       <ArrowRight size={15} aria-hidden="true" />
                     </ButtonLink>
                   </div>
@@ -321,16 +245,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Public DLP Audit & Township Transparency Hub (Live Canopy Map) */}
-        <div
-          id="transparency"
-          className="px-[var(--page-gutter)] py-16 bg-[var(--background)] border-t border-[var(--border)]"
-        >
-          <div className="max-w-6xl mx-auto">
-            <TownshipTransparencyExplorer />
-          </div>
-        </div>
-
         <section
           className="community-section"
           id="community"
@@ -352,7 +266,7 @@ export default function Home() {
               daily walk? The resident experience is designed to make both
               simple.
             </p>
-            <ButtonLink href="#residents">
+            <ButtonLink href="#workspaces">
               Explore the resident journey{" "}
               <ArrowRight size={17} aria-hidden="true" />
             </ButtonLink>
@@ -401,259 +315,22 @@ export default function Home() {
             <SectionHeading
               id="platform-title"
               label="05 / Explore the platform"
-              description="Different responsibilities. The same tree record."
             >
               The right view.
               <br />
               For the work you do.
             </SectionHeading>
-            <p className="availability-note">
-              Open a unified workspace or launch directly into the live
-              resident, field contractor, and township operations portals.
-            </p>
-          </div>
-
-          {/* Smart Device Auto-Detection & Quick Launch Bar */}
-          <div className="mb-10 max-w-4xl">
-            <div className="surface-panel p-5 sm:p-6 space-y-5 bg-[var(--background)] border border-[var(--border)]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-[var(--radius-control)] bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0">
-                    {deviceType === "mobile" ? (
-                      <Smartphone className="w-5 h-5 text-[var(--accent)]" />
-                    ) : (
-                      <Laptop className="w-5 h-5 text-[var(--verification)]" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-[var(--muted)] uppercase tracking-wider font-mono">
-                      Smart Device Auto-Detection
-                    </div>
-                    <div className="text-sm font-medium text-[var(--foreground)] flex flex-wrap items-center gap-2">
-                      <span>
-                        {deviceType === "mobile"
-                          ? "Mobile Device Active"
-                          : "Desktop Browser Active"}
-                      </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-[var(--radius-pill)] text-[11px] font-mono bg-[var(--surface)] text-[var(--accent-soft)] border border-[var(--border)]">
-                        {detectionSource}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 self-start sm:self-auto bg-[var(--surface)] p-1 rounded-[var(--radius-pill)] border border-[var(--border)]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeviceType("mobile");
-                      setDetectionSource("Manual switch: Mobile");
-                    }}
-                    className={`min-h-[36px] px-3.5 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
-                      deviceType === "mobile"
-                        ? "bg-[var(--accent)] text-[var(--accent-foreground)] font-semibold"
-                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    <Smartphone className="w-3.5 h-3.5" />
-                    <span>Mobile</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeviceType("desktop");
-                      setDetectionSource("Manual switch: Desktop");
-                    }}
-                    className={`min-h-[36px] px-3.5 py-1.5 rounded-[var(--radius-pill)] text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
-                      deviceType === "desktop"
-                        ? "bg-[var(--verification)] text-[var(--accent-foreground)] font-semibold"
-                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    <Laptop className="w-3.5 h-3.5" />
-                    <span>Desktop</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Link
-                  id="smart-start-button"
-                  href={targetPath}
-                  prefetch={true}
-                  onClick={() => setRedirecting(targetPath)}
-                  className="button button--primary w-full"
-                >
-                  <span>
-                    {redirecting ? `Loading ${redirecting}...` : targetLabel}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-
-                <div className="flex items-center justify-center gap-4 text-xs text-[var(--muted)]">
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-                    Target: {targetPath}
-                  </span>
-                  <span>•</span>
-                  <span>Tap to enter immediately</span>
-                </div>
-              </div>
-
-              {/* Direct Service Route Quick Links */}
-              <div className="pt-3 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                <Link
-                  href="/app/explore"
-                  onClick={() => setRedirecting("/app/explore")}
-                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <Trees className="w-4 h-4 text-[var(--accent)] shrink-0" />
-                    <div>
-                      <div className="text-xs font-medium text-[var(--foreground)]">
-                        Resident Explore
-                      </div>
-                      <div className="text-[11px] text-[var(--muted)] font-mono">
-                        /app/explore
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--accent)]" />
-                </Link>
-
-                <Link
-                  href="/app/hazards"
-                  onClick={() => setRedirecting("/app/hazards")}
-                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-[var(--status-warning)] shrink-0" />
-                    <div>
-                      <div className="text-xs font-medium text-[var(--foreground)]">
-                        Hazard Triage
-                      </div>
-                      <div className="text-[11px] text-[var(--muted)] font-mono">
-                        /app/hazards
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--status-warning)]" />
-                </Link>
-
-                <Link
-                  href="/app/maintenance"
-                  onClick={() => setRedirecting("/app/maintenance")}
-                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-[var(--verification)] shrink-0" />
-                    <div>
-                      <div className="text-xs font-medium text-[var(--foreground)]">
-                        Audit Stream
-                      </div>
-                      <div className="text-[11px] text-[var(--muted)] font-mono">
-                        /app/maintenance
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--verification)]" />
-                </Link>
-
-                <Link
-                  href="/contractor/tasks"
-                  onClick={() => setRedirecting("/contractor/tasks")}
-                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <HardHat className="w-4 h-4 text-[var(--accent-soft)] shrink-0" />
-                    <div>
-                      <div className="text-xs font-medium text-[var(--foreground)]">
-                        Field Portal
-                      </div>
-                      <div className="text-[11px] text-[var(--muted)] font-mono">
-                        /contractor/tasks
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--accent-soft)]" />
-                </Link>
-
-                <Link
-                  href="/admin"
-                  onClick={() => setRedirecting("/admin")}
-                  className="min-h-[48px] p-2.5 rounded-[var(--radius-control)] bg-[var(--surface)] hover:bg-[var(--surface-raised)] border border-[var(--border)] hover:border-[var(--control-border)] text-left transition-colors group flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4 text-[var(--verification)] shrink-0" />
-                    <div>
-                      <div className="text-xs font-medium text-[var(--foreground)]">
-                        Command Center
-                      </div>
-                      <div className="text-[11px] text-[var(--muted)] font-mono">
-                        /admin
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--muted)] group-hover:text-[var(--verification)]" />
-                </Link>
-              </div>
+            <div className="pt-4">
+              <ButtonLink href={targetPath}>
+                Launch TreeLedger <ArrowRight size={17} aria-hidden="true" />
+              </ButtonLink>
             </div>
           </div>
-
-          <div className="platform-entries">
-            {experiences.map(
-              ({ id, title, description, journey, href, link, icon: Icon }) => (
-                <details
-                  className="surface-panel role-entry"
-                  id={id}
-                  key={id}
-                  data-reveal
-                >
-                  <summary>
-                    <Icon size={24} strokeWidth={1.4} aria-hidden="true" />
-                    <span>{title}</span>
-                    <span className="expand-symbol" aria-hidden="true">
-                      +
-                    </span>
-                  </summary>
-                  <p className="role-description">{description}</p>
-                  <ol>
-                    {journey.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
-                  <div className="role-entry-actions">
-                    <ButtonLink
-                      href={
-                        id === "residents"
-                          ? "/app"
-                          : id === "field-teams"
-                            ? "/contractor"
-                            : "/admin"
-                      }
-                    >
-                      Open {title.toLowerCase()} workspace{" "}
-                      <ArrowUpRight size={16} aria-hidden="true" />
-                    </ButtonLink>
-                    <ButtonLink variant="text" href={href}>
-                      {link}
-                      <ArrowUpRight size={16} aria-hidden="true" />
-                    </ButtonLink>
-                  </div>
-                </details>
-              )
-            )}
-          </div>
-          <p className="platform-footnote">
-            Residents discover and report. Contractors document care. Township
-            teams review the evidence.
-          </p>
         </section>
       </main>
       <footer className="site-footer">
         <Brand href="#overview" className="wordmark" />
-        <p>Urban forestry & municipal SLA verification.</p>
+        <p>Urban forestry &amp; municipal SLA verification.</p>
         <a href="#overview">
           Back to the canopy <ArrowUpRight size={15} aria-hidden="true" />
         </a>
