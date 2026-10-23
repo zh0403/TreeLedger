@@ -55,7 +55,7 @@ export default function Home() {
     };
   }, []);
 
-  const targetPath = "/app";
+  const targetPath = deviceType === "mobile" ? "/app/explore" : "/admin";
 
   return (
     <div className="landing">
@@ -96,11 +96,11 @@ export default function Home() {
                   digital ecosystem.
                 </p>
                 <div className="hero-actions">
-                  <ButtonLink href="/app">
+                  <ButtonLink href={targetPath}>
                     Launch TreeLedger{" "}
                     <ArrowRight size={17} aria-hidden="true" />
                   </ButtonLink>
-                  <ButtonLink href="/map" variant="secondary">
+                  <ButtonLink href="#ledger" variant="secondary">
                     View Live Tree Map{" "}
                     <ArrowUpRight size={16} aria-hidden="true" />
                   </ButtonLink>
@@ -180,11 +180,10 @@ export default function Home() {
                   <h3>Live tree map</h3>
                   <p>
                     Inspect City of Elmina precincts, pre-handover DLP quotas,
-                    and real-time canopy telemetry in the dedicated Live Map
-                    explorer.
+                    and real-time canopy telemetry in the living ledger below.
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
-                    <ButtonLink href="/map">
+                    <ButtonLink href="#ledger">
                       Open Live Tree Map{" "}
                       <ArrowRight size={15} aria-hidden="true" />
                     </ButtonLink>
@@ -247,9 +246,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 04 / The living ledger */}
+        {/* 04 / The living ledger — Scoped outside .cinematic-story for a clean ground-truth transition */}
         <section
-          className="ledger-section"
+          className="ledger-section relative z-10"
           id="ledger"
           aria-labelledby="ledger-title"
         >
@@ -264,14 +263,14 @@ export default function Home() {
               <SectionHeading
                 id="ledger-title"
                 label="04 / The living ledger"
-                description="Public Defect Liability Period (DLP) Audit & Township Canopy"
               >
-                Promised on paper.
+                Every promise planted.
                 <br />
-                Verified in the soil.
+                Every warranty sealed.
               </SectionHeading>
               <p className="ledger-lead">
-                Before taking vacant possession, explore planted tree quotas across City of Elmina, live health telemetry, and contractor defect liability commitments.
+                Pre-handover green quota audits and 2-year defect liability
+                period tracking for City of Elmina homebuyers.
               </p>
             </div>
             <div className="ledger-frame">
