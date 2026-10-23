@@ -640,6 +640,7 @@ export function AdminCommandCenter({
         <div className="gis-header-actions">
           {/* Map View / Table View Toggle Button */}
           <div
+            className="gis-display-mode"
             role="group"
             aria-label="Workspace display mode"
             style={{
@@ -654,6 +655,7 @@ export function AdminCommandCenter({
           >
             <button
               type="button"
+              aria-label="Map view"
               aria-pressed={displayMode === "map"}
               onClick={() => setDisplayMode("map")}
               style={{
@@ -666,9 +668,6 @@ export function AdminCommandCenter({
                 border: 0,
                 fontSize: "11px",
                 fontWeight: displayMode === "map" ? 600 : 400,
-                background:
-                  displayMode === "map" ? "var(--gis-accent)" : "transparent",
-                color: displayMode === "map" ? "#071c16" : "var(--gis-muted)",
               }}
             >
               <MapIcon size={14} aria-hidden="true" />
@@ -676,6 +675,7 @@ export function AdminCommandCenter({
             </button>
             <button
               type="button"
+              aria-label="Table view"
               aria-pressed={displayMode === "table"}
               onClick={() => setDisplayMode("table")}
               style={{
@@ -688,9 +688,6 @@ export function AdminCommandCenter({
                 border: 0,
                 fontSize: "11px",
                 fontWeight: displayMode === "table" ? 600 : 400,
-                background:
-                  displayMode === "table" ? "var(--gis-accent)" : "transparent",
-                color: displayMode === "table" ? "#071c16" : "var(--gis-muted)",
               }}
             >
               <Table2 size={14} aria-hidden="true" />
@@ -1178,7 +1175,7 @@ export function AdminCommandCenter({
                 bottom: "33px",
                 left: 0,
                 zIndex: 5,
-                width: "min(380px, calc(100vw - 88px))",
+                width: "min(380px, calc(100% - 44px))",
                 display: "flex",
                 flexDirection: "column",
                 background: "color-mix(in srgb, var(--gis-panel) 97%, transparent)",
@@ -1208,9 +1205,9 @@ export function AdminCommandCenter({
                 style={{
                   position: "absolute",
                   top: "50%",
-                  right: "-24px",
+                  right: "-44px",
                   transform: "translateY(-50%)",
-                  width: "24px",
+                  width: "44px",
                   height: "56px",
                   display: "grid",
                   placeItems: "center",
@@ -1329,7 +1326,9 @@ export function AdminCommandCenter({
               className="gis-legend"
               aria-label="Tree status reference"
               style={{
-                left: leftPanelOpen ? "398px" : "24px",
+                left: leftPanelOpen ? "min(398px, 50%)" : "24px",
+                right: "24px",
+                width: "fit-content",
                 bottom: "48px",
                 transition: "left 220ms cubic-bezier(0.22, 1, 0.36, 1)",
               }}

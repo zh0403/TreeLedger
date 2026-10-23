@@ -302,7 +302,7 @@ export default function ContractorTasksPage() {
 
       {/* Queue Filter Tabs (44px tap targets) */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex rounded-[var(--radius-pill)] bg-[var(--surface)] border border-[var(--border)] p-1 gap-1">
+        <div className="tl-segmented inline-flex" role="group" aria-label="Filter work order queue">
           <button
             type="button"
             onClick={() => setQueueFilter('ACTIVE')}
@@ -381,7 +381,7 @@ export default function ContractorTasksPage() {
             return (
               <article
                 key={task.id}
-                className="surface-panel p-5 space-y-4 transition-colors"
+                className="contractor-task-card surface-panel p-5 space-y-4 transition-colors"
                 style={{
                   borderLeft: `4px solid ${
                     isCritical && task.status !== 'RESOLVED'
@@ -390,8 +390,8 @@ export default function ContractorTasksPage() {
                   }`,
                 }}
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
+                <div className="contractor-task-card-header">
+                  <div className="contractor-task-card-reference">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs font-medium px-2.5 py-1 rounded-[var(--radius-pill)] bg-[var(--background)] text-[var(--accent)] border border-[var(--control-border)]">
                         WO #{task.id} • {task.tree_id}
@@ -409,17 +409,17 @@ export default function ContractorTasksPage() {
                     </p>
                   </div>
 
-                  {/* Outdoor-Contrast SLA Countdown Badge */}
+                  {/* Compact SLA status; time window remains explicit. */}
                   <StatusBadge tone={isCritical ? 'critical' : 'warning'}>
                     <span
-                      className="font-mono font-medium"
+                      className="font-medium"
                       style={{
                         color: isCritical
                           ? 'var(--status-critical-text)'
                           : 'var(--status-warning)',
                       }}
                     >
-                      {isCritical ? '24H SLA CRITICAL' : '72H STANDARD SLA'}
+                      {isCritical ? 'Critical · 24h SLA' : 'Standard · 72h SLA'}
                     </span>
                   </StatusBadge>
                 </div>

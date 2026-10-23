@@ -158,7 +158,7 @@ export default function MaintenanceStreamPage() {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <div className="tl-segmented flex items-center" role="group" aria-label="Filter maintenance records by action">
             {(
               [
                 { key: 'ALL', label: `All Audits (${records.length})` },
@@ -281,7 +281,7 @@ export default function MaintenanceStreamPage() {
                     <Layers className="w-3.5 h-3.5 text-[var(--proof-400)]" />
                     Archival Before / After Proof Plate
                   </span>
-                  <div className="inline-flex rounded-[var(--radius-pill)] bg-[var(--background)] border border-[var(--border)] p-1 text-xs font-medium">
+                  <div className="tl-segmented inline-flex" role="group" aria-label={`Photo comparison for maintenance record ${rec.id}`}>
                     {(['SPLIT', 'BEFORE', 'AFTER'] as const).map((m) => (
                       <button
                         key={m}

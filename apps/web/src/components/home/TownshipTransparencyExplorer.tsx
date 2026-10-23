@@ -567,7 +567,8 @@ export function TownshipTransparencyExplorer({
     return () => {
       disposed = true;
       markers.forEach((m) => m.remove());
-      roots.forEach((r) => r.unmount());
+      // Nested roots must unmount after the parent React commit has finished.
+      queueMicrotask(() => roots.forEach((r) => r.unmount()));
     };
   }, [filteredTrees, status, selectedTree?.id]);
 

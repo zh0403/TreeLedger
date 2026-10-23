@@ -91,7 +91,12 @@ export function ResidentMap({ trees, onList, selectedTreeId, onSelect, showPrevi
         instance.fitBounds(bounds,{ padding: 72, maxZoom: 16, duration: 0 });
       }
     });
-    return () => { disposed = true; markers.forEach(marker => marker.remove()); roots.forEach(root => root.unmount()); };
+    return () => {
+      disposed = true;
+      markers.forEach(marker => marker.remove());
+      // Nested roots must unmount after the parent React commit has finished.
+      queueMicrotask(() => roots.forEach(root => root.unmount()));
+    };
   }, [trees, status, activeId, onSelect]);
 
   const locate = () => {

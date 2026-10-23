@@ -249,34 +249,27 @@ export default function HazardsPage() {
   };
 
   return (
-    <div className="p-4 space-y-5 font-sans text-[var(--foreground)]">
+    <div className="community-feed p-4 space-y-5 font-sans text-[var(--foreground)]">
       {/* Top Banner & Report CTA */}
       <section
-        className="surface-panel p-4"
+        className="community-feed-banner surface-panel p-4"
         style={{
           background:
             'radial-gradient(ellipse at top right, var(--ambient), transparent 65%), var(--surface)',
         }}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="community-feed-banner-inner flex items-start justify-between gap-3">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 text-[var(--status-warning)] text-xs font-medium uppercase tracking-wider">
-              <ShieldAlert className="w-4 h-4" />
-              <span>Civic Hazard &amp; SLA Feed</span>
-            </div>
+            <h2 className="community-feed-title"><ShieldAlert className="w-4 h-4" aria-hidden="true" /><span>Help care for your neighbourhood</span></h2>
             <p className="text-xs text-[var(--muted)] leading-relaxed">
-              Every resident report is triaged by{' '}
-              <span className="text-[var(--foreground)] font-medium">
-                Gemini Vision AI
-              </span>{' '}
-              and bound to an automated contractor SLA countdown.
+              Share a location, a photo and what you noticed. Available triage and care updates appear below.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="min-h-[44px] shrink-0 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--accent)] hover:bg-[var(--accent-soft)] text-[var(--accent-foreground)] font-medium px-4 py-2 text-xs transition-colors cursor-pointer"
+            className="community-report-button min-h-[44px] shrink-0 inline-flex items-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--accent)] hover:bg-[var(--accent-soft)] text-[var(--accent-foreground)] font-medium px-4 py-2 text-xs transition-colors cursor-pointer"
           >
             <Camera className="w-4 h-4" />
             <span>Report Hazard</span>
@@ -285,8 +278,8 @@ export default function HazardsPage() {
       </section>
 
       {/* Status Filter Pills */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      <div className="community-feed-toolbar flex items-center justify-between gap-2">
+        <div className="community-feed-filters flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar" role="group" aria-label="Filter reports by status">
           {(
             [
               { key: 'ALL', label: `All (${hazards.length})` },
@@ -380,14 +373,14 @@ export default function HazardsPage() {
             return (
               <article
                 key={hazard.id}
-                className="surface-panel p-4 space-y-4 transition-colors hover:border-[var(--control-border)]"
+                className="community-report-card surface-panel p-4 space-y-4 transition-colors hover:border-[var(--control-border)]"
                 style={{
                   borderLeft: `3px solid ${severity.borderVar}`,
                 }}
               >
                 {/* Header Row */}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
+                <div className="community-report-card-heading flex items-start justify-between gap-2">
+                  <div className="community-report-card-reference">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs font-medium px-2.5 py-0.5 rounded-[var(--radius-pill)] bg-[var(--background)] text-[var(--accent)] border border-[var(--border)]">
                         {hazard.tree_id}
@@ -411,18 +404,19 @@ export default function HazardsPage() {
                   </div>
 
                   <StatusBadge tone={severity.tone}>
-                    <span style={{ color: severity.colorVar }} className="font-mono font-medium">
+                    <span style={{ color: severity.colorVar }} className="community-severity-label font-medium">
                       {severity.label}
                     </span>
                   </StatusBadge>
                 </div>
 
                 {/* Evidence Photo & Gemini AI Triage Summary */}
-                <div className="flex gap-3.5 items-start">
+                <div className="community-report-evidence flex gap-3.5 items-start">
                   <button
                     type="button"
                     onClick={() => setPreviewHazard(hazard)}
-                    className="relative w-24 h-24 rounded-[var(--radius-control)] overflow-hidden border border-[var(--control-border)] shrink-0 group bg-[var(--background)] cursor-pointer"
+                    className="community-report-photo relative w-24 h-24 rounded-[var(--radius-control)] overflow-hidden border border-[var(--control-border)] shrink-0 group bg-[var(--background)] cursor-pointer"
+                    aria-label={`View evidence for incident ${hazard.id}`}
                   >
                     <img
                       src={hazard.evidence_photo_url}
@@ -455,12 +449,12 @@ export default function HazardsPage() {
                 {/* Organic Minimalist Vertical Branch Progression Timeline */}
                 <div
                   aria-label="Incident Status Stepper"
-                  className="rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2.5"
+                  className="community-report-timeline rounded-[var(--radius-control)] bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-2.5"
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-[var(--muted)]">
                     <span className="inline-flex items-center gap-1.5">
                       <GitBranch className="w-3.5 h-3.5 text-[var(--accent)]" />
-                      Living Resolution Branch
+                      Care timeline
                     </span>
                     <span className="text-[var(--accent)]">
                       Stage {activeIdx + 1} of {STEPPER_STEPS.length}

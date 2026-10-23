@@ -7,7 +7,6 @@ import { filterResidentTrees, residentHealthLabels, residentTreeRecords, type Re
 import { ResidentMap } from "./resident-map";
 import { TreeDiscovery } from "./tree-discovery";
 import { useResidentReportEditor } from "./resident-shell";
-import { MainServicesLinks } from "../main-services";
 
 function BotanicalFrond() {
   return <svg className="explorer-frond" viewBox="0 0 140 580" fill="none" aria-hidden="true"><path d="M18 -10C95 128 14 318 64 580" stroke="currentColor" strokeWidth="2" />{[0,1,2,3,4,5].map(i => <g key={i} transform={`translate(${i % 2 ? 38 : 20} ${i * 92}) rotate(${i % 2 ? -28 : 18})`}><path d="M12 72C-36 26-18-22 12-51C59-2 61 42 12 72Z" fill="currentColor" fillOpacity=".28" stroke="currentColor" strokeOpacity=".4" /><path d="M12 72V-40M12 28L-9 6M12 4L29-16M12 49L36 26" stroke="currentColor" strokeOpacity=".5" /></g>)}</svg>;
@@ -80,6 +79,5 @@ export function ResidentHome({ trees = residentTreeRecords }: { trees?: readonly
         <p className="resident-draft-note">Local drafts only. Reports are not submitted while the service is disconnected.</p>
       </aside>
     </div>
-    <details className="explorer-services"><summary>Township services <ArrowRight size={17} aria-hidden="true" /></summary><p>Integrated registry, reporting, and maintenance prototypes. Sample fallbacks are labelled in those views.</p><MainServicesLinks /></details>
   </main>;
 }

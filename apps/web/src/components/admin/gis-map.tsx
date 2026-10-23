@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { Map as MapboxMap, Marker, StyleSpecification } from "mapbox-gl";
 import { MapPin, RefreshCw, TreePine } from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { constrainMapPadding } from "./map-layout";
 import {
   hasCoordinates,
   healthLabels,
@@ -206,6 +207,8 @@ export function GISMap({
         if (typeof ResizeObserver !== "undefined" && container.current) {
           observer = new ResizeObserver(() => {
             map.resize();
+            const element = map.getContainer();
+            map.setPadding(constrainMapPadding(element.clientWidth, element.clientHeight, map.getPadding()));
           });
           observer.observe(container.current);
         }
@@ -257,7 +260,9 @@ export function GISMap({
           }`
         );
         button.setAttribute("aria-pressed", String(isSelected));
-        button.style.position = "relative";
+        // Mapbox translates every marker from the same canvas origin. Relative
+        // positioning would add normal-flow offsets and stack them vertically.
+        button.style.position = "absolute";
         button.style.display = "grid";
         button.style.placeItems = "center";
         button.style.padding = "0";
@@ -336,12 +341,12 @@ export function GISMap({
           bounds.extend([tree.coordinates[0], tree.coordinates[1]])
         );
         instance.fitBounds(bounds, {
-          padding: {
+          padding: constrainMapPadding(instance.getContainer().clientWidth, instance.getContainer().clientHeight, {
             top: 70,
             bottom: 70,
             left: !phone && leftOpenRef.current ? 430 : 70,
             right: 70,
-          },
+          }),
           maxZoom: 15.8,
           duration: 0,
         });
@@ -351,7 +356,8 @@ export function GISMap({
     return () => {
       disposed = true;
       markers.forEach((marker) => marker.remove());
-      roots.forEach((root) => root.unmount());
+      // Nested roots must unmount after the parent React commit has finished.
+      queueMicrotask(() => roots.forEach((root) => root.unmount()));
     };
   }, [records, state.status, showTrees, showHealth, opacity, selectedId, onSelect]);
 
@@ -367,12 +373,12 @@ export function GISMap({
       center: [tree.coordinates[0], tree.coordinates[1]],
       zoom: Math.max(map.getZoom(), 16.4),
       duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700,
-      padding: {
+      padding: constrainMapPadding(map.getContainer().clientWidth, map.getContainer().clientHeight, {
         top: 64,
         bottom: phone ? Math.round(window.innerHeight * 0.45) : 64,
         left: !phone && leftOpenRef.current ? 420 : 64,
         right: 64,
-      },
+      }),
     });
   }, [selectedId, records, state.status]);
 

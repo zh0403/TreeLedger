@@ -1,0 +1,125 @@
+/* Shared responsive safeguards; keep desktop layouts and primary actions intact. */
+.site-menu-toggle { display: none; }
+
+@media(max-width: 850px) {
+  .site-header.site-header { flex-wrap: nowrap; padding: 12px 24px; }
+  .site-header .site-menu-toggle {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--foreground);
+    background: var(--surface);
+  }
+  .site-header .tl-navigation {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    padding: 12px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--forest-950);
+  }
+  .site-header[data-menu-open="true"] .tl-navigation {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .site-header .tl-navigation a { padding: 10px 12px; min-height: 44px; font-size: 14px; }
+  .site-header .tl-navigation a:hover { background: var(--surface); border-radius: 8px; }
+}
+
+@media(max-width: 767px) {
+  html { scroll-padding-top: 90px; scroll-padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+  :is(.resident-shell,.field-shell,.integrated-service-content,.nature-form-layout,.nature-reports-content) { min-width: 0; }
+  :is(.resident-shell,.field-shell,.admin-operations) :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),textarea) { font-size: 16px; }
+  :is(.resident-shell,.field-shell,.admin-operations) input[type="file"] { min-width: 0; max-width: 100%; }
+  :is(.resident-shell,.field-shell,.admin-operations) :is(button,input,select,textarea) { max-width: 100%; }
+  :is(.resident-footer,.field-footer) { flex-wrap: wrap; gap: 8px 16px; }
+  :is(.resident-footer,.field-footer)>a { display: inline-flex; align-items: center; min-height: 44px; }
+  :is(.resident-shell,.field-shell) .workspace-section-navigation { gap: 6px; }
+  .workspace-section-navigation .tl-nav-link { white-space: normal; }
+  :is(.workspace-dialog,.nature-draft-dialog,.field-task-dialog,.tree-passport)[class] {
+    max-height: calc(100dvh - 24px);
+    overscroll-behavior: contain;
+    scroll-padding-block: 20px;
+  }
+  .integrated-service-content [role="dialog"]>div {
+    min-width: 0;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(20px,env(safe-area-inset-bottom));
+  }
+  .integrated-service-content [role="dialog"] button[aria-label] { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+  .integrated-service-content [role="dialog"] :is(h2,h3,p,label) { overflow-wrap: anywhere; }
+  .integrated-service-content [role="dialog"] form>div:last-child { flex-wrap: wrap; }
+  .contractor-task-card>div:last-child { gap: 12px; }
+  .contractor-task-card>div:last-child>div:last-child { min-width: 0; flex-wrap: wrap; }
+  .contractor-task-card>div:last-child button { white-space: normal; padding-block: 10px; }
+  .nature-form-actions { flex-wrap: wrap; }
+  .nature-form-progress p { overflow-wrap: anywhere; }
+  .nature-report-toolbar>* { min-width: 0; }
+  .nature-report-guide p,.nature-report-guide a { overflow-wrap: anywhere; }
+  .nature-reports-service-note a { flex-wrap: wrap; }
+  .resident-tree-card { min-width: 0; }
+  .resident-tree-card-copy { overflow-wrap: anywhere; }
+  .field-task-meta { flex-wrap: wrap; }
+  .ledger-hud { width: calc(100% - 82px); max-width: 300px; }
+  .ledger-hud-row { display: grid; grid-template-columns: minmax(0,1fr); gap: 3px; }
+  .ledger-hud-row dd { margin: 0; text-align: left; overflow-wrap: anywhere; }
+  .ledger-hud-header { flex-wrap: wrap; }
+  .ledger-capsule-actions,.ledger-guarantee-head { flex-wrap: wrap; gap: 8px; }
+  .ledger-guarantee-card { min-width: 0; }
+  .ledger-guarantee-hash,.audit-note p>span { overflow-wrap: anywhere; }
+  .ledger-capsule { max-width: calc(100% - 24px); }
+  .nature-explore .nature-passport { max-height: min(42svh,320px); }
+  .admin-operations-dialog { display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
+  .admin-operations-dialog>div { flex-shrink: 0; }
+  .admin-operations-dialog>div:nth-child(2) { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .admin-operations-dialog>div:last-child { flex-wrap: wrap; }
+  .admin-operations-dialog button { min-height: 44px; min-width: 44px; }
+  .admin-operations main>section { min-width: 0; }
+  .admin-operations>header>div>div { flex-wrap: wrap; }
+}
+
+@media(max-width: 400px) {
+  .resident-shell.resident-shell--explorer .resident-header-inner { padding-inline: 14px; gap: 8px; }
+  .resident-shell.resident-shell--explorer .resident-brand { gap: 8px; }
+  .resident-shell.resident-shell--explorer .resident-brand>span { font-size: 18px; }
+  .resident-shell.resident-shell--explorer .resident-header-actions { gap: 4px; }
+  .resident-shell.resident-shell--explorer .resident-preview-switch select { max-width: 88px; padding-left: 6px; }
+  .field-shell .field-header .tl-brand>span { font-size: 18px; }
+  .field-shell .field-header>div { gap: 10px; padding-inline: 16px; }
+  .nature-report-page .nature-guided-report[class] { padding: 18px; }
+  .nature-report-page .nature-form-progress { gap: 8px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .nature-report-page .nature-form-progress li { flex-direction: row; align-items: center; }
+  .nature-map-filter select { font-size: 12px; }
+  .nature-view-switch { gap: 4px; }
+  .explorer-summary>div,.explorer-summary>a { min-width: 0; }
+  .explorer-summary span { overflow-wrap: anywhere; }
+}
+@media(max-width: 360px) {
+  .resident-shell.resident-shell--explorer .resident-brand>span { display: none; }
+  .field-shell .field-header .tl-brand small { display: none; }
+  .field-shell .field-header .tl-brand>span { font-size: 17px; }
+  .field-shell .field-header .tl-brand { gap: 7px; }
+  .site-header.site-header { padding-inline: 18px; }
+  .hero-actions { flex-direction: column; align-items: stretch; max-width: 300px; }
+  .hero-actions .button { justify-content: space-between; }
+}
+@media(max-height: 500px) and (max-width: 1000px) {
+  .site-header .tl-navigation { max-height: calc(100dvh - 70px); }
+  :is(.workspace-dialog,.nature-draft-dialog,.field-task-dialog,.tree-passport) { max-height: calc(100dvh - 16px); }
+  .gis { min-height: 240px; }
+}

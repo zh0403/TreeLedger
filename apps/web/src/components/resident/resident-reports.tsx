@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CameraOff, ClipboardList, FilePenLine, Leaf, MapPin, Search, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CameraOff, FilePenLine, Leaf, MapPin, Search, ShieldCheck, X } from "lucide-react";
 import { StatusBadge } from "../ui/status-badge";
 import { useLocalDrafts, type LocalDraft } from "../workspaces/local-drafts";
 
@@ -19,9 +19,20 @@ export function ResidentReports() {
   useEffect(() => { if (selected) dialog.current?.showModal(); else dialog.current?.close(); }, [selected]);
   const filtered = local.drafts.filter(draft => (severity === "all" || draft.severity === severity) && [draft.id,draft.reference,draft.location,draft.description].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).sort((a,b) => (Date.parse(a.createdAt) - Date.parse(b.createdAt)) * (sort === "oldest" ? 1 : -1));
   return <main className="nature-page nature-reports-page">
-    <header className="nature-page-intro"><div><p><ClipboardList size={16} aria-hidden="true" />The care you notice</p><h1>Your reports,<br />all in one place.</h1><span>Keep track of the issues you’ve spotted and the care they receive.</span></div><Link href="/app/report" className="nature-intro-cta">Write a report <ArrowRight size={17} aria-hidden="true" /></Link></header>
+    <header className="nature-report-intro nature-reports-intro">
+      <div className="nature-report-intro-inner">
+        <nav className="nature-report-breadcrumb" aria-label="Breadcrumb"><Link href="/app"><ArrowLeft size={15} aria-hidden="true" />Home</Link><span aria-hidden="true">/</span><span aria-current="page">My reports</span></nav>
+        <div className="nature-reports-intro-content">
+          <div className="nature-report-intro-copy"><h1>My reports &amp; drafts.</h1><p>Keep your tree observations close. Find the notes you’ve saved, or start a new draft.</p></div>
+          <div className="nature-reports-intro-actions"><Link href="/app/report" className="nature-intro-cta"><FilePenLine size={18} aria-hidden="true" />Write a report<ArrowRight size={17} aria-hidden="true" /></Link><span>Drafts stay on this device until you choose what’s next.</span></div>
+        </div>
+      </div>
+    </header>
     <div className="nature-reports-content">
-      <div className="nature-report-summary"><section><FilePenLine size={24} strokeWidth={1.4} aria-hidden="true" /><div><span>Saved local drafts</span><strong>{local.loading || local.storageError ? "—" : local.drafts.length}</strong><small>Only on this device</small></div></section><section><ClipboardList size={24} strokeWidth={1.4} aria-hidden="true" /><div><span>Submitted reports</span><strong aria-label="Unavailable">—</strong><small>Not linked to local drafts</small></div></section><section><ShieldCheck size={24} strokeWidth={1.4} aria-hidden="true" /><div><span>Care updates</span><strong aria-label="Unavailable">—</strong><small>No connected status history</small></div></section></div>
+      <div className="nature-reports-overview">
+        <section className="nature-reports-draft-count" aria-label="Saved local drafts"><span><FilePenLine size={23} strokeWidth={1.4} aria-hidden="true" /></span><div><strong>{local.loading || local.storageError ? "—" : local.drafts.length}</strong><span>Saved local drafts</span><small>Only in this browser</small></div></section>
+        <div className="nature-reports-service-note"><ShieldCheck size={22} strokeWidth={1.4} aria-hidden="true" /><div><h2>Looking for submitted reports?</h2><p>Open Community reports for the existing reporting and tracking workflow. Local drafts are kept separately.</p></div><Link href="/app/hazards">Community reports<ArrowRight size={16} aria-hidden="true" /></Link></div>
+      </div>
       <div className="nature-report-toolbar"><div className="nature-report-tabs" role="group" aria-label="Report source"><button type="button" aria-pressed="true">Local drafts</button><button type="button" disabled title="Submitted report service is not connected" aria-describedby="nature-reports-disclosure">Submitted reports</button></div><label className="nature-report-search"><Search size={18} aria-hidden="true" /><span className="resident-sr-only">Search reports and drafts</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search tree, place, or note" /></label><label className="nature-report-select"><span className="resident-sr-only">Filter draft urgency</span><select aria-label="Filter draft urgency" value={severity} onChange={event => setSeverity(event.target.value)}><option value="all">All priorities</option>{Object.entries(priorities).map(([value,label]) => <option key={value} value={value}>{label} priority</option>)}</select></label><label className="nature-report-select"><span className="resident-sr-only">Sort drafts</span><select aria-label="Sort drafts" value={sort} onChange={event => setSort(event.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label></div>
       <p className="nature-reports-disclosure" id="nature-reports-disclosure"><ShieldCheck size={15} aria-hidden="true" />Local drafts are not submitted reports. The Community reports section has the existing reporting and tracking workflow.</p>
       {local.storageError && <p className="nature-form-error" role="alert">{local.storageError}</p>}

@@ -200,7 +200,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Organic Pre-Handover vs Living Stewardship Segmented Toggle */}
-        <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-[var(--radius-panel)] bg-[var(--surface)] border border-[var(--border)]">
+        <div className="tl-segmented tl-segmented--descriptive grid grid-cols-2" role="group" aria-label="Tree registry view">
           <button
             type="button"
             onClick={() => changeMode('PRE_HANDOVER_AUDIT')}
@@ -257,7 +257,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Precinct Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <div className="tl-segmented flex items-center" role="group" aria-label="Filter trees by precinct">
           <button
             type="button"
             onClick={() => setSelectedPrecinct('ALL')}

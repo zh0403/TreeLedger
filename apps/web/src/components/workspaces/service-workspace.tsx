@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { MainPrototypeNotice } from "../main-services";
 import { FieldHeader } from "../contractor/field-header";
@@ -18,6 +20,23 @@ const serviceHeadings: Record<string, [string,string]> = {
 function ServiceContent({ children, role }: { children: ReactNode; role: "resident" | "contractor" }) {
   const pathname = usePathname();
   const heading = serviceHeadings[pathname];
+  if (role === "resident" && pathname === "/app/hazards") {
+    return <div className="integrated-service integrated-service--resident integrated-service--community legacy-app" data-theme="light">
+      <header className="community-report-header">
+        <div className="community-report-header-inner">
+          <nav className="community-report-breadcrumb" aria-label="Breadcrumb"><Link href="/app"><ArrowLeft size={15} aria-hidden="true" />Home</Link><span aria-hidden="true">/</span><span aria-current="page">Community reports</span></nav>
+          <div className="community-report-header-content">
+            <div><h1>Community reports.</h1><p>Report a tree concern and follow its care timeline.</p></div>
+            <div className="community-report-header-note"><ShieldCheck size={23} strokeWidth={1.4} aria-hidden="true" /><p>From the first observation to field work.<span>View the status and supporting evidence available for each report.</span></p></div>
+          </div>
+        </div>
+      </header>
+      <div className="integrated-service-inner">
+        <MainPrototypeNotice home="/app" integrated />
+        <div className="integrated-service-content">{children}</div>
+      </div>
+    </div>;
+  }
   return <div className={`integrated-service integrated-service--${role} legacy-app`} data-theme="dark">
     <div className="integrated-service-inner">
       {heading && <header className="integrated-service-heading"><h1>{heading[0]}</h1><p>{heading[1]}</p></header>}

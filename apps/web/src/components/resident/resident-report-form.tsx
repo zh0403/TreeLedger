@@ -49,7 +49,27 @@ export function ResidentReportForm({ initialReference = "", initialLocation = ""
   const removePhoto = () => { setFile(null); setPreview(""); setFileError(""); if (fileInput.current) fileInput.current.value = ""; };
 
   return <main className="nature-page nature-report-page">
-    <header className="nature-page-intro"><div><p><Leaf size={16} aria-hidden="true" />A little care goes a long way</p><h1>Help keep your<br />neighbourhood green.</h1><span>Spotted a damaged or unhealthy tree? Tell us what happened.</span></div><div className="nature-intro-symbol" aria-hidden="true"><Leaf size={92} strokeWidth={.7} /></div></header>
+    <header className="nature-report-intro">
+      <div className="nature-report-intro-inner">
+        <nav className="nature-report-breadcrumb" aria-label="Breadcrumb">
+          <Link href="/app"><ArrowLeft size={15} aria-hidden="true" />Home</Link>
+          <span aria-hidden="true">/</span><span aria-current="page">Write a report</span>
+        </nav>
+        <div className="nature-report-intro-content">
+          <div className="nature-report-intro-copy">
+            <h1>A little care.<br />A greener neighbourhood.</h1>
+            <p>Noticed a tree that needs attention? Start with where it is and what you saw.</p>
+          </div>
+          <aside className="nature-report-draft-info" aria-label="About this editor">
+            <span className="nature-report-draft-label"><ClipboardList size={16} aria-hidden="true" />Local draft editor</span>
+            <h2>Your notes, before you send.</h2>
+            <p>Save a draft on this device. Nothing is sent to the township from this editor.</p>
+            <Link href="/app/hazards">Ready to submit? Open Community reports<ArrowRight size={16} aria-hidden="true" /></Link>
+          </aside>
+        </div>
+        <div className="nature-report-intro-caption"><Leaf size={16} aria-hidden="true" /><span>A location, an observation, a little care.</span><span>Photos are optional</span></div>
+      </div>
+    </header>
     <div className="nature-form-layout">
       <section className="nature-guided-report" aria-labelledby="nature-stage-title">
         {saved ? <div className="nature-report-success"><span><Check size={28} aria-hidden="true" /></span><h2 ref={heading} id="nature-stage-title" tabIndex={-1}>Your draft is saved.</h2><p role="status">Saved on this device only. It has not been submitted, and the photo preview was not saved.</p><p className="nature-local-reference">Local reference · {saved.id.slice(0,8)}</p><div><Link className="resident-button resident-button--primary" href="/app/reports">View my reports & drafts <ArrowRight size={17} aria-hidden="true" /></Link><Button type="button" variant="secondary" onClick={() => { setSaved(null); setReference(""); setLocation(""); setDescription(""); setSeverity("low"); setDescriptionError(""); move(0); }}>Start another draft</Button></div></div> : <>
