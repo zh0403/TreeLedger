@@ -23,17 +23,21 @@ import { StatusBadge } from '@/components/ui/status-badge';
 export const ELMINA_CENTER_LNG = 101.5034;
 export const ELMINA_CENTER_LAT = 3.1942;
 
-// Same geographic basemap specification used in /app (resident-map.tsx)
+// High-availability geographic basemap specification (CDN-backed for desktop & mobile browsers)
 const geographicStyle: StyleSpecification = {
   version: 8,
   sources: {
     geography: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      ],
       tileSize: 256,
       maxzoom: 19,
       attribution:
-        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
     },
   },
   layers: [
@@ -41,7 +45,7 @@ const geographicStyle: StyleSpecification = {
       id: 'geography',
       type: 'raster',
       source: 'geography',
-      paint: { 'raster-saturation': -0.6, 'raster-brightness-max': 0.75 },
+      paint: { 'raster-saturation': -0.55, 'raster-brightness-max': 0.78 },
     },
   ],
 };
@@ -437,7 +441,10 @@ export function TownshipTransparencyExplorer({
         if (disposed || !container.current) return;
         instance = new mapboxgl.Map({
           container: container.current,
-          accessToken: token || 'pk.eyJ1IjoidHJlZWxlZGdlciIsImEiOiJjb placeholdersIn0.0',
+          accessToken:
+            token && token.startsWith('pk.')
+              ? token
+              : 'pk.eyJ1IjoidHJlZWxlZGdlciIsImEiOiJjbHBsYWNlaG9sZGVyIn0.0',
           style: satelliteMode.current ? satelliteStyle : geographicStyle,
           center: [ELMINA_CENTER_LNG, ELMINA_CENTER_LAT],
           zoom: 14.8,
@@ -467,21 +474,7 @@ export function TownshipTransparencyExplorer({
           observer.observe(container.current);
         }
 
-        const fail = () => {
-          if (disposed) return;
-          clearTimeout(timeout);
-          if (satelliteMode.current) {
-            satelliteMode.current = false;
-            setSatellite(false);
-          } else {
-            setStatus('error');
-          }
-        };
-
-        instance.on('error', (event) => {
-          if ('sourceId' in event || !instance?.isStyleLoaded()) fail();
-        });
-        timeout = setTimeout(markReady, 4500);
+        timeout = setTimeout(markReady, 2500);
       } catch {
         if (!disposed) setStatus('error');
       }

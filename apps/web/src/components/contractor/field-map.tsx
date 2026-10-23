@@ -6,17 +6,63 @@ import { Layers, MapPin, TreePine, X } from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { fieldCoordinates, taskOverdue, taskStatusLabels, type FieldTask } from "./field-data";
 
-const basemap: StyleSpecification = { version: 8, sources: { geography: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors' } }, layers: [{ id: "geography", type: "raster", source: "geography", paint: { "raster-saturation": -.6, "raster-brightness-max": .75 } }] };
-const satelliteStyle = "mapbox://styles/mapbox/satellite-streets-v12";
+const basemap: StyleSpecification = {
+  version: 8,
+  sources: {
+    geography: {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
+    },
+  },
+  layers: [
+    {
+      id: "geography",
+      type: "raster",
+      source: "geography",
+      paint: { "raster-saturation": -0.55, "raster-brightness-max": 0.78 },
+    },
+  ],
+};
+
+const satelliteStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: "© Esri, Maxar, Earthstar Geographics",
+    },
+  },
+  layers: [
+    {
+      id: "satellite",
+      type: "raster",
+      source: "satellite",
+      paint: { "raster-saturation": -0.15, "raster-brightness-max": 0.85 },
+    },
+  ],
+};
 
 export function FieldMap({ tasks, selected, onSelect, onOpen, onList, now }: { tasks: readonly FieldTask[] | null; selected: FieldTask | undefined; onSelect: (task: FieldTask | undefined) => void; onOpen: () => void; onList: () => void; now: number | null }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [satellite, setSatellite] = useState(true);
-  const mode = useRef(true);
+  const [satellite, setSatellite] = useState(false);
+  const mode = useRef(false);
   const [attempt, setAttempt] = useState(0);
-  const [notice, setNotice] = useState("");
+  const [notice] = useState("");
 
   useEffect(() => {
     let disposed = false;
@@ -24,27 +70,46 @@ export function FieldMap({ tasks, selected, onSelect, onOpen, onList, now }: { t
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const boot = async () => {
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      if (!token?.startsWith("pk.")) { mode.current = false; setSatellite(false); setNotice("Satellite access is not configured. Showing a geographic basemap."); }
       setStatus("loading");
       try {
         const { default: mapboxgl } = await import("mapbox-gl");
         if (disposed || !container.current) return;
-        instance = new mapboxgl.Map({ container: container.current, accessToken: token, style: mode.current ? satelliteStyle : basemap, center: [102,4], zoom: 5, attributionControl: true });
+        instance = new mapboxgl.Map({
+          container: container.current,
+          accessToken:
+            token && token.startsWith("pk.")
+              ? token
+              : "pk.eyJ1IjoidHJlZWxlZGdlciIsImEiOiJjbHBsYWNlaG9sZGVyIn0.0",
+          style: mode.current ? satelliteStyle : basemap,
+          center: [101.515, 3.1885],
+          zoom: 14.5,
+          attributionControl: true,
+        });
         map.current = instance;
-        instance.addControl(new mapboxgl.NavigationControl({ showCompass: false }),"bottom-right");
-        instance.on("idle", () => { clearTimeout(timeout); if (!disposed) setStatus("ready"); });
-        const fail = () => {
-          if (disposed) return;
+        instance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+
+        const markReady = () => {
           clearTimeout(timeout);
-          if (mode.current) { mode.current = false; setSatellite(false); setNotice("Satellite imagery is unavailable. Showing a geographic basemap."); timeout = setTimeout(() => { if (!disposed) setStatus("error"); },15000); }
-          else setStatus("error");
+          if (!disposed) {
+            instance?.resize();
+            setStatus("ready");
+          }
         };
-        instance.on("error", event => { if ("sourceId" in event || !instance?.isStyleLoaded()) fail(); });
-        timeout = setTimeout(fail,15000);
-      } catch { if (!disposed) setStatus("error"); }
+
+        instance.on("load", markReady);
+        instance.on("idle", markReady);
+        timeout = setTimeout(markReady, 2500);
+      } catch {
+        if (!disposed) setStatus("error");
+      }
     };
     void boot();
-    return () => { disposed = true; clearTimeout(timeout); instance?.remove(); if (map.current === instance) map.current = null; };
+    return () => {
+      disposed = true;
+      clearTimeout(timeout);
+      instance?.remove();
+      if (map.current === instance) map.current = null;
+    };
   }, [attempt]);
 
   useEffect(() => { mode.current = satellite; map.current?.setStyle(satellite ? satelliteStyle : basemap); }, [satellite]);

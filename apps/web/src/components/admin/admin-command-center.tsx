@@ -497,6 +497,9 @@ export function AdminCommandCenter({
 
   useEffect(() => {
     let active = true;
+    if (typeof window !== "undefined" && window.innerWidth < 760) {
+      setLeftPanelOpen(false);
+    }
     void fetchTrees().then((records) => {
       if (active && records && records.length > 0) {
         setTreeList(buildElmina40Registry(records));

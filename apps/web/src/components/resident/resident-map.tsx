@@ -9,19 +9,62 @@ import type { Map as MapboxMap, Marker, StyleSpecification } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { hasResidentCoordinates, residentHealthLabels, residentPhotoSource, type ResidentTreeRecord } from "./resident-data";
 
-// Normal browser caching and visible attribution are retained; no tile prefetching.
+// High-availability geographic & satellite raster styles for desktop and mobile browsers.
 const geographicStyle: StyleSpecification = {
   version: 8,
-  sources: { geography: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors' } },
-  layers: [{ id: "geography", type: "raster", source: "geography", paint: { "raster-saturation": -.6, "raster-brightness-max": .75 } }],
+  sources: {
+    geography: {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
+    },
+  },
+  layers: [
+    {
+      id: "geography",
+      type: "raster",
+      source: "geography",
+      paint: { "raster-saturation": -0.55, "raster-brightness-max": 0.78 },
+    },
+  ],
+};
+
+const satelliteStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: "© Esri, Maxar, Earthstar Geographics",
+    },
+  },
+  layers: [
+    {
+      id: "satellite",
+      type: "raster",
+      source: "satellite",
+      paint: { "raster-saturation": -0.15, "raster-brightness-max": 0.85 },
+    },
+  ],
 };
 
 export function ResidentMap({ trees, onList, selectedTreeId, onSelect, showPreview = true }: { trees: readonly ResidentTreeRecord[] | null; onList: () => void; selectedTreeId?: string | null; onSelect?: (tree: ResidentTreeRecord | undefined) => void; showPreview?: boolean }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable" | "error">("loading");
-  const [satellite, setSatellite] = useState(true);
-  const satelliteMode = useRef(true);
+  const [satellite, setSatellite] = useState(false);
+  const satelliteMode = useRef(false);
   const [attempt, setAttempt] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -33,36 +76,65 @@ export function ResidentMap({ trees, onList, selectedTreeId, onSelect, showPrevi
   useEffect(() => {
     let disposed = false;
     let instance: MapboxMap | undefined;
+    let observer: ResizeObserver | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     const boot = async () => {
-      if (!token?.startsWith("pk.")) { satelliteMode.current = false; setSatellite(false); setMessage("Satellite access is not configured. Showing a geographic basemap."); }
       setStatus("loading");
       try {
         const { default: mapboxgl } = await import("mapbox-gl");
         if (disposed || !container.current) return;
-        instance = new mapboxgl.Map({ container: container.current, accessToken: token, style: satelliteMode.current ? "mapbox://styles/mapbox/satellite-streets-v12" : geographicStyle, center: [102,4], zoom: 5, attributionControl: true });
+        instance = new mapboxgl.Map({
+          container: container.current,
+          accessToken:
+            token && token.startsWith("pk.")
+              ? token
+              : "pk.eyJ1IjoidHJlZWxlZGdlciIsImEiOiJjbHBsYWNlaG9sZGVyIn0.0",
+          style: satelliteMode.current ? satelliteStyle : geographicStyle,
+          center: [101.515, 3.1885],
+          zoom: 14.5,
+          attributionControl: true,
+        });
         map.current = instance;
         instance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
-        instance.on("idle", () => { clearTimeout(timeout); if (!disposed) setStatus("ready"); });
-        const fail = () => {
-          if (disposed) return;
+
+        const markReady = () => {
           clearTimeout(timeout);
-          if (satelliteMode.current) { satelliteMode.current = false; setMessage("Satellite imagery is unavailable. Showing a geographic basemap."); setSatellite(false); timeout = setTimeout(() => { if (!disposed) setStatus("error"); },15000); }
-          else setStatus("error");
+          if (!disposed) {
+            instance?.resize();
+            setStatus("ready");
+          }
         };
-        instance.on("error", event => { if ("sourceId" in event || !instance?.isStyleLoaded()) fail(); });
-        timeout = setTimeout(fail,15000);
-      } catch { if (!disposed) setStatus("error"); }
+
+        instance.on("load", markReady);
+        instance.on("idle", markReady);
+
+        if (typeof ResizeObserver !== "undefined" && container.current) {
+          observer = new ResizeObserver(() => {
+            instance?.resize();
+          });
+          observer.observe(container.current);
+        }
+
+        timeout = setTimeout(markReady, 2500);
+      } catch {
+        if (!disposed) setStatus("error");
+      }
     };
     void boot();
-    return () => { disposed = true; clearTimeout(timeout); instance?.remove(); if (map.current === instance) map.current = null; };
+    return () => {
+      disposed = true;
+      clearTimeout(timeout);
+      observer?.disconnect();
+      instance?.remove();
+      if (map.current === instance) map.current = null;
+    };
   }, [attempt]);
 
   useEffect(() => {
     satelliteMode.current = satellite;
     const instance = map.current;
-    if (instance) instance.setStyle(satellite ? "mapbox://styles/mapbox/satellite-streets-v12" : geographicStyle);
+    if (instance) instance.setStyle(satellite ? satelliteStyle : geographicStyle);
   }, [satellite]);
 
   useEffect(() => {
